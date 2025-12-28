@@ -1,0 +1,179 @@
+{% extends "admin/dashboard.html" %}
+
+{% block title %}Reports - Admin{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <div class="row mb-4">
+        <div class="col">
+            <h2><i class="bi bi-flag"></i> Citizen Reports</h2>
+            <p class="text-muted">Manage citizen-reported issues</p>
+        </div>
+    </div>
+    
+    <div class="card">
+        <div class="card-header bg-white">
+            <ul class="nav nav-tabs card-header-tabs" role="tablist">
+                <li class="nav-item">
+                    <a class="nav-link active" data-bs-toggle="tab" href="#pending">Pending</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" data-bs-toggle="tab" href="#all">All Reports</a>
+                </li>
+            </ul>
+        </div>
+        <div class="card-body">
+            <div class="tab-content">
+                <div class="tab-pane fade show active" id="pending">
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead>
+                                <tr>
+                                    <th>ID</th>
+                                    <th>Citizen</th>
+                                    <th>Bin</th>
+                                    <th>Type</th>
+                                    <th>Description</th>
+                                    <th>Priority</th>
+                                    <th>Date</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="pendingReports">
+                                <tr>
+                                    <td colspan="8" class="text-center py-4">
+                                        <div class="spinner-border text-primary"></div>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+                <div class="tab-pane fade" id="all">
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead>
+                                <tr>
+                                    <th>ID</th>
+                                    <th>Citizen</th>
+                                    <th>Bin</th>
+                                    <th>Type</th>
+                                    <th>Priority</th>
+                                    <th>Status</th>
+                                    <th>Date</th>
+                                </tr>
+                            </thead>
+                            <tbody id="allReports">
+                                <tr>
+                                    <td colspan="7" class="text-center py-4">
+                                        <div class="spinner-border text-primary"></div>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+$(document).ready(function() {
+    loadPendingReports();
+    loadAllReports();
+});
+
+function loadPendingReports() {
+    $.get('/api/reports?status=pending', function(data) {
+        const tbody = $('#pendingReports');
+        tbody.empty();
+        
+        if (!data || data.length === 0) {
+            tbody.append('<tr><td colspan="8" class="text-center text-muted">No pending reports</td></tr>');
+            return;
+        }
+        
+        data.forEach(report => {
+            const priorityClass = {
+                'critical': 'danger',
+                'high': 'warning',
+                'medium': 'info',
+                'low': 'secondary'
+            }[report.priority] || 'secondary';
+            
+            tbody.append(`
+                <tr>
+                    <td>#${report.report_id}</td>
+                    <td>${report.citizen_name || 'Unknown'}</td>
+                    <td>${report.bin_code || 'N/A'}</td>
+                    <td><span class="badge bg-info">${report.report_type}</span></td>
+                    <td class="small">${report.description}</td>
+                    <td><span class="badge bg-${priorityClass}">${report.priority}</span></td>
+                    <td>${new Date(report.reported_at).toLocaleDateString()}</td>
+                    <td>
+                        <button class="btn btn-sm btn-success" onclick="resolveReport(${report.report_id})">
+                            <i class="bi bi-check"></i> Resolve
+                        </button>
+                    </td>
+                </tr>
+            `);
+        });
+    });
+}
+
+function loadAllReports() {
+    $.get('/api/reports', function(data) {
+        const tbody = $('#allReports');
+        tbody.empty();
+        
+        if (!data || data.length === 0) {
+            tbody.append('<tr><td colspan="7" class="text-center text-muted">No reports found</td></tr>');
+            return;
+        }
+        
+        data.forEach(report => {
+            const statusClass = {
+                'pending': 'warning',
+                'acknowledged': 'info',
+                'resolved': 'success',
+                'rejected': 'danger'
+            }[report.status] || 'secondary';
+            
+            tbody.append(`
+                <tr>
+                    <td>#${report.report_id}</td>
+                    <td>${report.citizen_name || 'Unknown'}</td>
+                    <td>${report.bin_code || 'N/A'}</td>
+                    <td>${report.report_type}</td>
+                    <td><span class="badge bg-${statusClass === 'danger' ? 'danger' : 'info'}">${report.priority}</span></td>
+                    <td><span class="badge bg-${statusClass}">${report.status}</span></td>
+                    <td>${new Date(report.reported_at).toLocaleDateString()}</td>
+                </tr>
+            `);
+        });
+    });
+}
+
+function resolveReport(reportId) {
+    if (confirm('Mark this report as resolved?')) {
+        $.ajax({
+            url: `/api/reports/${reportId}/status`,
+            method: 'POST',
+            contentType: 'application/json',
+            data: JSON.stringify({
+                status: 'resolved',
+                notes: 'Resolved by admin'
+            }),
+            success: function() {
+                alert('Report marked as resolved');
+                loadPendingReports();
+                loadAllReports();
+            }
+        });
+    }
+}
+</script>
+{% endblock %}

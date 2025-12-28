@@ -1,0 +1,157 @@
+{% extends "base.html" %}
+
+{% block title %}Staff Dashboard{% endblock %}
+
+{% block navbar %}
+<nav class="navbar navbar-expand-lg navbar-dark bg-primary sticky-top">
+    <div class="container-fluid">
+        <a class="navbar-brand" href="{{ url_for('staff_dashboard') }}">
+            <i class="bi bi-person-badge"></i> Staff Portal
+        </a>
+        <div class="collapse navbar-collapse">
+            <ul class="navbar-nav">
+                <li class="nav-item">
+                    <a class="nav-link active" href="{{ url_for('staff_dashboard') }}">
+                        <i class="bi bi-house"></i> Dashboard
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="{{ url_for('staff_collection') }}">
+                        <i class="bi bi-map"></i> Collection Routes
+                    </a>
+                </li>
+            </ul>
+            <ul class="navbar-nav ms-auto">
+                <li class="nav-item dropdown">
+                    <a class="nav-link dropdown-toggle" href="#" data-bs-toggle="dropdown">
+                        <i class="bi bi-person-circle"></i> {{ session.full_name }}
+                    </a>
+                    <ul class="dropdown-menu dropdown-menu-end">
+                        <li><a class="dropdown-item" href="{{ url_for('logout') }}">
+                            <i class="bi bi-box-arrow-right"></i> Logout
+                        </a></li>
+                    </ul>
+                </li>
+            </ul>
+        </div>
+    </div>
+</nav>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <h2 class="mb-4">Staff Dashboard</h2>
+    
+    <div class="row g-3 mb-4">
+        <div class="col-md-4">
+            <div class="card bg-warning text-white">
+                <div class="card-body">
+                    <h6>Bins Needing Collection</h6>
+                    <h2 id="fullBinsCount">
+                        <span class="spinner-border spinner-border-sm"></span>
+                    </h2>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card bg-success text-white">
+                <div class="card-body">
+                    <h6>Today's Collections</h6>
+                    <h2 id="todayCollections">
+                        <span class="spinner-border spinner-border-sm"></span>
+                    </h2>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card bg-info text-white">
+                <div class="card-body">
+                    <h6>Pending Reports</h6>
+                    <h2 id="pendingReports">
+                        <span class="spinner-border spinner-border-sm"></span>
+                    </h2>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="card">
+        <div class="card-header bg-white">
+            <h5 class="mb-0">Full Bins - Priority Collection</h5>
+        </div>
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-hover">
+                    <thead>
+                        <tr>
+                            <th>Bin Code</th>
+                            <th>Location</th>
+                            <th>Zone</th>
+                            <th>Level</th>
+                            <th>Last Updated</th>
+                        </tr>
+                    </thead>
+                    <tbody id="fullBinsTable">
+                        <tr>
+                            <td colspan="5" class="text-center py-4">
+                                <div class="spinner-border text-primary"></div>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+$(document).ready(function() {
+    loadStats();
+    loadFullBins();
+    setInterval(function() {
+        loadStats();
+        loadFullBins();
+    }, 30000);
+});
+
+function loadStats() {
+    $.get('/api/dashboard/stats', function(data) {
+        $('#fullBinsCount').text(data.full_bins || 0);
+        $('#todayCollections').text(data.today_collections || 0);
+        $('#pendingReports').text(data.pending_reports || 0);
+    });
+}
+
+function loadFullBins() {
+    $.get('/api/bins/full', function(data) {
+        const tbody = $('#fullBinsTable');
+        tbody.empty();
+        
+        if (!data || data.length === 0) {
+            tbody.append('<tr><td colspan="5" class="text-center text-muted">No full bins</td></tr>');
+            return;
+        }
+        
+        data.forEach(bin => {
+            tbody.append(`
+                <tr>
+                    <td><strong>${bin.bin_code}</strong></td>
+                    <td>${bin.location}</td>
+                    <td><span class="badge bg-info">${bin.zone}</span></td>
+                    <td>
+                        <div class="progress" style="height: 24px; width: 120px;">
+                            <div class="progress-bar bg-danger" style="width: ${bin.waste_level}%">
+                                ${bin.waste_level}%
+                            </div>
+                        </div>
+                    </td>
+                    <td>${new Date(bin.last_updated).toLocaleString()}</td>
+                </tr>
+            `);
+        });
+    });
+}
+</script>
+{% endblock %}

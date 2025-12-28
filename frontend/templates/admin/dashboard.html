@@ -1,0 +1,388 @@
+{% extends "base.html" %}
+
+{% block title %}Admin Dashboard - Smart Waste Management{% endblock %}
+
+{% block navbar %}
+<nav class="navbar navbar-expand-lg navbar-dark bg-success sticky-top">
+    <div class="container-fluid">
+        <a class="navbar-brand" href="{{ url_for('admin_dashboard') }}">
+            <i class="bi bi-speedometer2"></i> Admin Dashboard
+        </a>
+        <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+            <span class="navbar-toggler-icon"></span>
+        </button>
+        <div class="collapse navbar-collapse" id="navbarNav">
+            <ul class="navbar-nav">
+                <li class="nav-item">
+                    <a class="nav-link active" href="{{ url_for('admin_dashboard') }}">
+                        <i class="bi bi-house"></i> Dashboard
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="{{ url_for('admin_bins') }}">
+                        <i class="bi bi-trash"></i> Bins
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="{{ url_for('admin_vehicles') }}">
+                        <i class="bi bi-truck"></i> Vehicles
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="{{ url_for('admin_routes') }}">
+                        <i class="bi bi-map"></i> Routes
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="{{ url_for('admin_reports') }}">
+                        <i class="bi bi-flag"></i> Reports
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="{{ url_for('admin_users') }}">
+                        <i class="bi bi-people"></i> Users
+                    </a>
+                </li>
+            </ul>
+            <ul class="navbar-nav ms-auto">
+                <li class="nav-item dropdown">
+                    <a class="nav-link dropdown-toggle" href="#" id="userDropdown" role="button" 
+                       data-bs-toggle="dropdown">
+                        <i class="bi bi-person-circle"></i> {{ session.full_name }}
+                    </a>
+                    <ul class="dropdown-menu dropdown-menu-end">
+                        <li><a class="dropdown-item" href="{{ url_for('logout') }}">
+                            <i class="bi bi-box-arrow-right"></i> Logout
+                        </a></li>
+                    </ul>
+                </li>
+            </ul>
+        </div>
+    </div>
+</nav>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <div class="row mb-4">
+        <div class="col">
+            <h2><i class="bi bi-speedometer2"></i> Admin Dashboard</h2>
+            <p class="text-muted">Real-time system overview and analytics</p>
+        </div>
+    </div>
+    
+    <!-- Statistics Cards -->
+    <div class="row g-3 mb-4" id="statsCards">
+        <div class="col-md-3">
+            <div class="card bg-primary text-white h-100">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h6 class="card-subtitle mb-2 opacity-75">Total Bins</h6>
+                            <h2 class="card-title mb-0" id="totalBins">
+                                <span class="spinner-border spinner-border-sm"></span>
+                            </h2>
+                        </div>
+                        <i class="bi bi-trash3 opacity-50" style="font-size: 3rem;"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-3">
+            <div class="card bg-danger text-white h-100">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h6 class="card-subtitle mb-2 opacity-75">Full Bins</h6>
+                            <h2 class="card-title mb-0" id="fullBins">
+                                <span class="spinner-border spinner-border-sm"></span>
+                            </h2>
+                        </div>
+                        <i class="bi bi-exclamation-triangle opacity-50" style="font-size: 3rem;"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-3">
+            <div class="card bg-success text-white h-100">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h6 class="card-subtitle mb-2 opacity-75">Today's Collections</h6>
+                            <h2 class="card-title mb-0" id="todayCollections">
+                                <span class="spinner-border spinner-border-sm"></span>
+                            </h2>
+                        </div>
+                        <i class="bi bi-check-circle opacity-50" style="font-size: 3rem;"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-3">
+            <div class="card bg-warning text-white h-100">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h6 class="card-subtitle mb-2 opacity-75">Active Alerts</h6>
+                            <h2 class="card-title mb-0" id="activeAlerts">
+                                <span class="spinner-border spinner-border-sm"></span>
+                            </h2>
+                        </div>
+                        <i class="bi bi-bell opacity-50" style="font-size: 3rem;"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Charts Row -->
+    <div class="row g-3 mb-4">
+        <div class="col-md-8">
+            <div class="card h-100">
+                <div class="card-header bg-white">
+                    <h5 class="mb-0"><i class="bi bi-graph-up"></i> Waste Level Trend (7 Days)</h5>
+                </div>
+                <div class="card-body">
+                    <canvas id="wasteTrendChart"></canvas>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-4">
+            <div class="card h-100">
+                <div class="card-header bg-white">
+                    <h5 class="mb-0"><i class="bi bi-pie-chart"></i> Bins by Zone</h5>
+                </div>
+                <div class="card-body">
+                    <canvas id="zoneChart"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Full Bins Alert Table -->
+    <div class="row">
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header bg-white">
+                    <h5 class="mb-0"><i class="bi bi-exclamation-circle text-danger"></i> Full Bins Alert</h5>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-hover" id="fullBinsTable">
+                            <thead>
+                                <tr>
+                                    <th>Bin Code</th>
+                                    <th>Location</th>
+                                    <th>Level</th>
+                                    <th>Status</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td colspan="4" class="text-center">
+                                        <div class="spinner-border text-primary"></div>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header bg-white">
+                    <h5 class="mb-0"><i class="bi bi-bell text-warning"></i> Recent Alerts</h5>
+                </div>
+                <div class="card-body">
+                    <div class="list-group" id="alertsList">
+                        <div class="text-center py-3">
+                            <div class="spinner-border text-primary"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+$(document).ready(function() {
+    // Load dashboard statistics
+    loadDashboardStats();
+    loadWasteTrend();
+    loadZoneStats();
+    loadFullBins();
+    loadAlerts();
+    
+    // Auto-refresh every 30 seconds
+    setInterval(function() {
+        loadDashboardStats();
+        loadFullBins();
+        loadAlerts();
+    }, 30000);
+});
+
+function loadDashboardStats() {
+    $.get('/api/dashboard/stats', function(data) {
+        $('#totalBins').text(data.total_bins || 0);
+        $('#fullBins').text(data.full_bins || 0);
+        $('#todayCollections').text(data.today_collections || 0);
+        $('#activeAlerts').text(data.active_alerts || 0);
+    });
+}
+
+function loadWasteTrend() {
+    $.get('/api/dashboard/waste-trend?days=7', function(data) {
+        const ctx = document.getElementById('wasteTrendChart').getContext('2d');
+        
+        new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: data.map(d => d.date),
+                datasets: [{
+                    label: 'Average Waste Level (%)',
+                    data: data.map(d => d.avg_level),
+                    borderColor: 'rgb(75, 192, 192)',
+                    backgroundColor: 'rgba(75, 192, 192, 0.2)',
+                    tension: 0.1
+                }, {
+                    label: 'Max Waste Level (%)',
+                    data: data.map(d => d.max_level),
+                    borderColor: 'rgb(255, 99, 132)',
+                    backgroundColor: 'rgba(255, 99, 132, 0.2)',
+                    tension: 0.1
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: true,
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        max: 100
+                    }
+                }
+            }
+        });
+    });
+}
+
+function loadZoneStats() {
+    $.get('/api/dashboard/zone-stats', function(data) {
+        const ctx = document.getElementById('zoneChart').getContext('2d');
+        
+        new Chart(ctx, {
+            type: 'doughnut',
+            data: {
+                labels: data.map(d => d.zone),
+                datasets: [{
+                    data: data.map(d => d.total_bins),
+                    backgroundColor: [
+                        'rgb(255, 99, 132)',
+                        'rgb(54, 162, 235)',
+                        'rgb(255, 205, 86)',
+                        'rgb(75, 192, 192)',
+                        'rgb(153, 102, 255)'
+                    ]
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: true,
+                plugins: {
+                    legend: {
+                        position: 'bottom'
+                    }
+                }
+            }
+        });
+    });
+}
+
+function loadFullBins() {
+    $.get('/api/bins/full', function(data) {
+        const tbody = $('#fullBinsTable tbody');
+        tbody.empty();
+        
+        if (data.length === 0) {
+            tbody.append('<tr><td colspan="4" class="text-center text-muted">No full bins</td></tr>');
+            return;
+        }
+        
+        data.forEach(bin => {
+            const statusClass = bin.waste_level >= 90 ? 'danger' : 'warning';
+            const row = `
+                <tr>
+                    <td><strong>${bin.bin_code}</strong></td>
+                    <td>${bin.location}</td>
+                    <td>
+                        <div class="progress" style="height: 20px;">
+                            <div class="progress-bar bg-${statusClass}" role="progressbar" 
+                                 style="width: ${bin.waste_level}%" 
+                                 aria-valuenow="${bin.waste_level}" aria-valuemin="0" aria-valuemax="100">
+                                ${bin.waste_level}%
+                            </div>
+                        </div>
+                    </td>
+                    <td><span class="badge bg-${statusClass}">Alert</span></td>
+                </tr>
+            `;
+            tbody.append(row);
+        });
+    });
+}
+
+function loadAlerts() {
+    $.get('/api/alerts', function(data) {
+        const container = $('#alertsList');
+        container.empty();
+        
+        if (data.length === 0) {
+            container.append('<div class="text-center text-muted py-3">No active alerts</div>');
+            return;
+        }
+        
+        data.slice(0, 5).forEach(alert => {
+            const severityClass = {
+                'critical': 'danger',
+                'warning': 'warning',
+                'info': 'info'
+            }[alert.severity] || 'secondary';
+            
+            const item = `
+                <div class="list-group-item">
+                    <div class="d-flex w-100 justify-content-between">
+                        <h6 class="mb-1">
+                            <span class="badge bg-${severityClass}">${alert.severity.toUpperCase()}</span>
+                            ${alert.bin_code || 'System'}
+                        </h6>
+                        <small class="text-muted">${formatDate(alert.created_at)}</small>
+                    </div>
+                    <p class="mb-1 small">${alert.message}</p>
+                </div>
+            `;
+            container.append(item);
+        });
+    });
+}
+
+function formatDate(dateStr) {
+    const date = new Date(dateStr);
+    const now = new Date();
+    const diff = now - date;
+    const hours = Math.floor(diff / 3600000);
+    
+    if (hours < 1) return 'Just now';
+    if (hours < 24) return `${hours}h ago`;
+    return date.toLocaleDateString();
+}
+</script>
+{% endblock %}

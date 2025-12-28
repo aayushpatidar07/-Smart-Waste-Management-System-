@@ -1,0 +1,205 @@
+{% extends "admin/dashboard.html" %}
+
+{% block title %}Routes - Admin{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <div class="row mb-4">
+        <div class="col">
+            <h2><i class="bi bi-map"></i> Collection Routes</h2>
+            <p class="text-muted">Manage and optimize waste collection routes</p>
+        </div>
+        <div class="col-auto">
+            <button class="btn btn-success" onclick="generateAIRoute()">
+                <i class="bi bi-robot"></i> AI Route Optimizer
+            </button>
+        </div>
+    </div>
+    
+    <!-- Today's Routes -->
+    <div class="card">
+        <div class="card-header bg-white">
+            <h5 class="mb-0">Today's Routes</h5>
+        </div>
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-hover">
+                    <thead>
+                        <tr>
+                            <th>Route Name</th>
+                            <th>Vehicle</th>
+                            <th>Driver</th>
+                            <th>Start Time</th>
+                            <th>Bins</th>
+                            <th>Progress</th>
+                            <th>Status</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="routesTable">
+                        <tr>
+                            <td colspan="8" class="text-center py-4">
+                                <div class="spinner-border text-primary"></div>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- AI Route Optimization Modal -->
+<div class="modal fade" id="aiRouteModal" tabindex="-1">
+    <div class="modal-dialog modal-xl">
+        <div class="modal-content">
+            <div class="modal-header bg-success text-white">
+                <h5 class="modal-title"><i class="bi bi-robot"></i> AI Route Optimization</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div id="aiRouteContent">
+                    <div class="text-center py-5">
+                        <div class="spinner-border text-success" style="width: 3rem; height: 3rem;"></div>
+                        <p class="mt-3">Generating optimized routes using AI...</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+$(document).ready(function() {
+    loadRoutes();
+    setInterval(loadRoutes, 60000);
+});
+
+function loadRoutes() {
+    const today = new Date().toISOString().split('T')[0];
+    
+    $.get(`/api/routes?date=${today}`, function(data) {
+        const tbody = $('#routesTable');
+        tbody.empty();
+        
+        if (!data || data.length === 0) {
+            tbody.append('<tr><td colspan="8" class="text-center text-muted">No routes scheduled for today</td></tr>');
+            return;
+        }
+        
+        data.forEach(route => {
+            const statusClass = {
+                'planned': 'secondary',
+                'in-progress': 'primary',
+                'completed': 'success',
+                'cancelled': 'danger'
+            }[route.status] || 'secondary';
+            
+            const progress = route.total_bins > 0 ? 
+                Math.round((route.bins_collected / route.total_bins) * 100) : 0;
+            
+            const row = `
+                <tr>
+                    <td><strong>${route.route_name}</strong></td>
+                    <td>${route.vehicle_number || 'N/A'}</td>
+                    <td>${route.driver_name || 'N/A'}</td>
+                    <td>${route.start_time || 'N/A'}</td>
+                    <td>${route.bins_collected} / ${route.total_bins}</td>
+                    <td>
+                        <div class="progress" style="height: 20px; min-width: 80px;">
+                            <div class="progress-bar bg-${statusClass}" style="width: ${progress}%">
+                                ${progress}%
+                            </div>
+                        </div>
+                    </td>
+                    <td><span class="badge bg-${statusClass}">${route.status}</span></td>
+                    <td>
+                        <button class="btn btn-sm btn-info" onclick="viewRoute(${route.route_id})">
+                            <i class="bi bi-eye"></i>
+                        </button>
+                    </td>
+                </tr>
+            `;
+            tbody.append(row);
+        });
+    });
+}
+
+function generateAIRoute() {
+    $('#aiRouteModal').modal('show');
+    
+    $.get('/api/ai/predict-collection', function(data) {
+        if (!data || data.length === 0) {
+            $('#aiRouteContent').html('<p class="text-center text-muted py-5">No bins need collection at this time</p>');
+            return;
+        }
+        
+        const bins = data.filter(b => b.needs_collection).slice(0, 10);
+        
+        $.ajax({
+            url: '/api/ai/optimize-route',
+            method: 'POST',
+            contentType: 'application/json',
+            data: JSON.stringify({
+                bin_ids: bins.map(b => b.bin_id)
+            }),
+            success: function(route) {
+                let content = `
+                    <div class="alert alert-success">
+                        <h5><i class="bi bi-check-circle"></i> Optimized Route Generated</h5>
+                        <p>Total Distance: ${route.total_distance} km | Bins: ${route.total_bins} | 
+                           Avg Waste Level: ${route.average_waste_level}%</p>
+                    </div>
+                    
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead>
+                                <tr>
+                                    <th>#</th>
+                                    <th>Bin Code</th>
+                                    <th>Location</th>
+                                    <th>Waste Level</th>
+                                    <th>Distance</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                `;
+                
+                route.bins.forEach(bin => {
+                    content += `
+                        <tr>
+                            <td><strong>${bin.sequence}</strong></td>
+                            <td>${bin.bin_code}</td>
+                            <td>${bin.location}</td>
+                            <td>
+                                <div class="progress" style="width: 100px; height: 20px;">
+                                    <div class="progress-bar bg-${bin.waste_level >= 80 ? 'danger' : 'warning'}" 
+                                         style="width: ${bin.waste_level}%">
+                                        ${bin.waste_level}%
+                                    </div>
+                                </div>
+                            </td>
+                            <td>${bin.distance_from_previous} km</td>
+                        </tr>
+                    `;
+                });
+                
+                content += `
+                            </tbody>
+                        </table>
+                    </div>
+                `;
+                
+                $('#aiRouteContent').html(content);
+            }
+        });
+    });
+}
+
+function viewRoute(routeId) {
+    window.location.href = `/admin/routes/${routeId}`;
+}
+</script>
+{% endblock %}

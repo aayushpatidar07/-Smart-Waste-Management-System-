@@ -1,0 +1,87 @@
+{% extends "admin/dashboard.html" %}
+
+{% block title %}Vehicles - Admin{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <div class="row mb-4">
+        <div class="col">
+            <h2><i class="bi bi-truck"></i> Vehicle Management</h2>
+            <p class="text-muted">Track and manage waste collection vehicles</p>
+        </div>
+    </div>
+    
+    <div class="row g-4" id="vehiclesGrid">
+        <div class="col-12 text-center py-5">
+            <div class="spinner-border text-primary"></div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+$(document).ready(function() {
+    loadVehicles();
+    setInterval(loadVehicles, 60000);
+});
+
+function loadVehicles() {
+    $.get('/api/vehicles', function(data) {
+        const grid = $('#vehiclesGrid');
+        grid.empty();
+        
+        if (!data || data.length === 0) {
+            grid.append('<div class="col-12 text-center text-muted">No vehicles found</div>');
+            return;
+        }
+        
+        data.forEach(vehicle => {
+            const statusClass = {
+                'available': 'success',
+                'on-route': 'primary',
+                'maintenance': 'warning',
+                'offline': 'secondary'
+            }[vehicle.status] || 'secondary';
+            
+            const loadPercent = (vehicle.current_load / vehicle.capacity) * 100;
+            
+            const card = `
+                <div class="col-md-6 col-lg-4">
+                    <div class="card h-100">
+                        <div class="card-header bg-${statusClass} text-white">
+                            <h5 class="mb-0">
+                                <i class="bi bi-truck"></i> ${vehicle.vehicle_number}
+                            </h5>
+                        </div>
+                        <div class="card-body">
+                            <p><strong>Type:</strong> ${vehicle.vehicle_type}</p>
+                            <p><strong>Driver:</strong> ${vehicle.driver_name || 'N/A'}</p>
+                            <p><strong>Phone:</strong> ${vehicle.driver_phone || 'N/A'}</p>
+                            <p><strong>Zone:</strong> ${vehicle.assigned_zone || 'N/A'}</p>
+                            
+                            <div class="mb-2">
+                                <label class="small">Current Load</label>
+                                <div class="progress" style="height: 25px;">
+                                    <div class="progress-bar ${loadPercent > 80 ? 'bg-danger' : 'bg-success'}" 
+                                         style="width: ${loadPercent}%">
+                                        ${vehicle.current_load} / ${vehicle.capacity} L
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="d-grid gap-2 mt-3">
+                                <span class="badge bg-${statusClass} p-2">
+                                    ${vehicle.status.toUpperCase()}
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+            grid.append(card);
+        });
+    });
+}
+</script>
+{% endblock %}

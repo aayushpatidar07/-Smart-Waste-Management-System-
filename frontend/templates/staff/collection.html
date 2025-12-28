@@ -1,0 +1,75 @@
+{% extends "staff/dashboard.html" %}
+
+{% block title %}Collection Routes - Staff{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <div class="row mb-4">
+        <div class="col">
+            <h2><i class="bi bi-map"></i> Today's Collection Routes</h2>
+        </div>
+    </div>
+    
+    <div class="row g-4" id="routesContent">
+        <div class="col-12 text-center py-5">
+            <div class="spinner-border text-primary"></div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+$(document).ready(function() {
+    loadRoutes();
+});
+
+function loadRoutes() {
+    const today = new Date().toISOString().split('T')[0];
+    
+    $.get(`/api/routes?date=${today}`, function(data) {
+        const container = $('#routesContent');
+        container.empty();
+        
+        if (!data || data.length === 0) {
+            container.append('<div class="col-12 text-center text-muted">No routes for today</div>');
+            return;
+        }
+        
+        data.forEach(route => {
+            const statusClass = {
+                'planned': 'secondary',
+                'in-progress': 'primary',
+                'completed': 'success'
+            }[route.status] || 'secondary';
+            
+            const progress = route.total_bins > 0 ? 
+                Math.round((route.bins_collected / route.total_bins) * 100) : 0;
+            
+            const card = `
+                <div class="col-md-6">
+                    <div class="card h-100">
+                        <div class="card-header bg-${statusClass} text-white">
+                            <h5 class="mb-0">${route.route_name}</h5>
+                        </div>
+                        <div class="card-body">
+                            <p><strong>Vehicle:</strong> ${route.vehicle_number || 'N/A'}</p>
+                            <p><strong>Driver:</strong> ${route.driver_name || 'N/A'}</p>
+                            <p><strong>Start Time:</strong> ${route.start_time || 'N/A'}</p>
+                            <p><strong>Progress:</strong> ${route.bins_collected} / ${route.total_bins} bins</p>
+                            <div class="progress mb-3" style="height: 25px;">
+                                <div class="progress-bar bg-${statusClass}" style="width: ${progress}%">
+                                    ${progress}%
+                                </div>
+                            </div>
+                            <span class="badge bg-${statusClass} p-2">${route.status.toUpperCase()}</span>
+                        </div>
+                    </div>
+                </div>
+            `;
+            container.append(card);
+        });
+    });
+}
+</script>
+{% endblock %}

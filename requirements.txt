@@ -1,0 +1,28 @@
+# Smart Waste Management System - Dependencies
+# Python 3.8+
+
+# Web Framework
+Flask==2.3.2
+Flask-Cors==4.0.0
+
+# Database
+mysql-connector-python==8.1.0
+PyMySQL==1.1.0
+
+# AI/ML Libraries
+scikit-learn==1.3.0
+numpy==1.24.3
+pandas==2.0.3
+
+# Data Processing
+scipy==1.11.1
+
+# Utilities
+python-dotenv==1.0.0
+werkzeug==2.3.6
+
+# IoT Simulation
+schedule==1.2.0
+
+# Additional
+requests==2.31.0

@@ -1,0 +1,77 @@
+{% extends "citizen/dashboard.html" %}
+
+{% block title %}Collection Schedule - Citizen{% endblock %}
+
+{% block content %}
+<div class="container py-5">
+    <div class="card shadow">
+        <div class="card-header bg-success text-white">
+            <h4 class="mb-0"><i class="bi bi-calendar-check"></i> Waste Collection Schedule</h4>
+        </div>
+        <div class="card-body">
+            <div class="row g-4" id="scheduleContent">
+                <div class="col-12 text-center py-5">
+                    <div class="spinner-border text-success"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+$(document).ready(function() {
+    loadSchedules();
+});
+
+function loadSchedules() {
+    $.get('/api/schedules', function(data) {
+        const container = $('#scheduleContent');
+        container.empty();
+        
+        if (!data || data.length === 0) {
+            container.append('<div class="col-12 text-center text-muted">No schedules available</div>');
+            return;
+        }
+        
+        // Group by zone
+        const zones = {};
+        data.forEach(schedule => {
+            if (!zones[schedule.zone]) {
+                zones[schedule.zone] = [];
+            }
+            zones[schedule.zone].push(schedule);
+        });
+        
+        Object.keys(zones).forEach(zone => {
+            const card = `
+                <div class="col-md-6">
+                    <div class="card h-100">
+                        <div class="card-header bg-info text-white">
+                            <h5 class="mb-0">${zone}</h5>
+                        </div>
+                        <div class="card-body">
+                            <div class="list-group">
+                                ${zones[zone].map(s => `
+                                    <div class="list-group-item">
+                                        <div class="d-flex w-100 justify-content-between">
+                                            <h6 class="mb-1">${s.day_of_week}</h6>
+                                            <small>${s.collection_time}</small>
+                                        </div>
+                                        <p class="mb-1">
+                                            <span class="badge bg-secondary">${s.waste_type}</span>
+                                        </p>
+                                    </div>
+                                `).join('')}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+            container.append(card);
+        });
+    });
+}
+</script>
+{% endblock %}

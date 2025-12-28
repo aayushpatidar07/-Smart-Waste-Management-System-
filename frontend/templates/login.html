@@ -1,0 +1,96 @@
+{% extends "base.html" %}
+
+{% block title %}Login - Smart Waste Management{% endblock %}
+
+{% block content %}
+<div class="login-page">
+    <nav class="navbar navbar-dark bg-success">
+        <div class="container">
+            <a class="navbar-brand" href="/">
+                <i class="bi bi-recycle"></i> Smart Waste Management
+            </a>
+        </div>
+    </nav>
+    
+    <div class="container">
+        <div class="row justify-content-center align-items-center min-vh-100">
+            <div class="col-md-5">
+                <div class="card shadow-lg">
+                    <div class="card-body p-5">
+                        <div class="text-center mb-4">
+                            <i class="bi bi-person-circle text-success" style="font-size: 4rem;"></i>
+                            <h3 class="mt-3">System Login</h3>
+                            <p class="text-muted">Enter your credentials to continue</p>
+                        </div>
+                        
+                        {% if error %}
+                        <div class="alert alert-danger alert-dismissible fade show" role="alert">
+                            <i class="bi bi-exclamation-triangle"></i> {{ error }}
+                            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                        </div>
+                        {% endif %}
+                        
+                        <form method="POST" action="{{ url_for('login') }}" id="loginForm">
+                            <div class="mb-3">
+                                <label for="username" class="form-label">Username</label>
+                                <div class="input-group">
+                                    <span class="input-group-text"><i class="bi bi-person"></i></span>
+                                    <input type="text" class="form-control" id="username" name="username" 
+                                           placeholder="Enter username" required autofocus>
+                                </div>
+                            </div>
+                            
+                            <div class="mb-3">
+                                <label for="password" class="form-label">Password</label>
+                                <div class="input-group">
+                                    <span class="input-group-text"><i class="bi bi-lock"></i></span>
+                                    <input type="password" class="form-control" id="password" name="password" 
+                                           placeholder="Enter password" required>
+                                </div>
+                            </div>
+                            
+                            <div class="d-grid">
+                                <button type="submit" class="btn btn-success btn-lg">
+                                    <i class="bi bi-box-arrow-in-right"></i> Login
+                                </button>
+                            </div>
+                        </form>
+                        
+                        <hr class="my-4">
+                        
+                        <div class="demo-credentials">
+                            <p class="text-center text-muted mb-2"><small>Demo Credentials:</small></p>
+                            <div class="row g-2 small">
+                                <div class="col-4 text-center">
+                                    <div class="bg-light p-2 rounded">
+                                        <strong>Admin</strong><br>
+                                        admin / admin123
+                                    </div>
+                                </div>
+                                <div class="col-4 text-center">
+                                    <div class="bg-light p-2 rounded">
+                                        <strong>Staff</strong><br>
+                                        staff1 / staff123
+                                    </div>
+                                </div>
+                                <div class="col-4 text-center">
+                                    <div class="bg-light p-2 rounded">
+                                        <strong>Citizen</strong><br>
+                                        citizen1 / citizen123
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="text-center mt-3">
+                    <a href="/" class="text-decoration-none">
+                        <i class="bi bi-arrow-left"></i> Back to Home
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

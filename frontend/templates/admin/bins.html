@@ -1,0 +1,198 @@
+{% extends "admin/dashboard.html" %}
+
+{% block title %}Bin Management - Admin{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <div class="row mb-4">
+        <div class="col">
+            <h2><i class="bi bi-trash3"></i> Smart Bin Management</h2>
+            <p class="text-muted">Monitor and manage all smart waste bins</p>
+        </div>
+    </div>
+    
+    <!-- Filters -->
+    <div class="card mb-4">
+        <div class="card-body">
+            <div class="row g-3">
+                <div class="col-md-3">
+                    <select class="form-select" id="zoneFilter">
+                        <option value="">All Zones</option>
+                        <option value="Zone A">Zone A</option>
+                        <option value="Zone B">Zone B</option>
+                        <option value="Zone C">Zone C</option>
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <select class="form-select" id="statusFilter">
+                        <option value="">All Status</option>
+                        <option value="active">Active</option>
+                        <option value="maintenance">Maintenance</option>
+                        <option value="inactive">Inactive</option>
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <select class="form-select" id="levelFilter">
+                        <option value="">All Levels</option>
+                        <option value="full">Full (≥80%)</option>
+                        <option value="medium">Medium (40-79%)</option>
+                        <option value="empty">Empty (<40%)</option>
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <button class="btn btn-primary w-100" onclick="loadBins()">
+                        <i class="bi bi-search"></i> Apply Filters
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Bins Grid -->
+    <div class="card">
+        <div class="card-header bg-white">
+            <h5 class="mb-0">All Bins</h5>
+        </div>
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-hover">
+                    <thead>
+                        <tr>
+                            <th>Bin Code</th>
+                            <th>Location</th>
+                            <th>Zone</th>
+                            <th>Type</th>
+                            <th>Waste Level</th>
+                            <th>Status</th>
+                            <th>Last Updated</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="binsTableBody">
+                        <tr>
+                            <td colspan="8" class="text-center py-4">
+                                <div class="spinner-border text-primary"></div>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Bin Details Modal -->
+<div class="modal fade" id="binModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="modalTitle">Bin Details</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body" id="modalBody">
+                <div class="text-center py-4">
+                    <div class="spinner-border text-primary"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+$(document).ready(function() {
+    loadBins();
+    setInterval(loadBins, 60000); // Refresh every minute
+});
+
+function loadBins() {
+    $.get('/api/bins', function(data) {
+        const tbody = $('#binsTableBody');
+        tbody.empty();
+        
+        if (!data || data.length === 0) {
+            tbody.append('<tr><td colspan="8" class="text-center text-muted">No bins found</td></tr>');
+            return;
+        }
+        
+        data.forEach(bin => {
+            const levelClass = bin.waste_level >= 80 ? 'danger' : 
+                             bin.waste_level >= 40 ? 'warning' : 'success';
+            const statusClass = bin.status === 'active' ? 'success' : 
+                              bin.status === 'maintenance' ? 'warning' : 'secondary';
+            
+            const row = `
+                <tr>
+                    <td><strong>${bin.bin_code}</strong></td>
+                    <td>${bin.location}</td>
+                    <td><span class="badge bg-info">${bin.zone}</span></td>
+                    <td>${bin.bin_type}</td>
+                    <td>
+                        <div class="progress" style="height: 24px; min-width: 100px;">
+                            <div class="progress-bar bg-${levelClass}" style="width: ${bin.waste_level}%">
+                                ${bin.waste_level}%
+                            </div>
+                        </div>
+                    </td>
+                    <td><span class="badge bg-${statusClass}">${bin.status}</span></td>
+                    <td>${formatDateTime(bin.last_updated)}</td>
+                    <td>
+                        <button class="btn btn-sm btn-primary" onclick="viewBinDetails(${bin.bin_id})">
+                            <i class="bi bi-eye"></i>
+                        </button>
+                    </td>
+                </tr>
+            `;
+            tbody.append(row);
+        });
+    });
+}
+
+function viewBinDetails(binId) {
+    $.get(`/api/bins/${binId}`, function(bin) {
+        $('#modalTitle').text(`${bin.bin_code} - Details`);
+        
+        const content = `
+            <div class="row">
+                <div class="col-md-6">
+                    <h6>Basic Information</h6>
+                    <table class="table table-sm">
+                        <tr><th>Bin Code:</th><td>${bin.bin_code}</td></tr>
+                        <tr><th>Location:</th><td>${bin.location}</td></tr>
+                        <tr><th>Zone:</th><td>${bin.zone}</td></tr>
+                        <tr><th>Type:</th><td>${bin.bin_type}</td></tr>
+                        <tr><th>Capacity:</th><td>${bin.capacity} L</td></tr>
+                        <tr><th>Status:</th><td><span class="badge bg-success">${bin.status}</span></td></tr>
+                    </table>
+                </div>
+                <div class="col-md-6">
+                    <h6>Current Status</h6>
+                    <div class="mb-3">
+                        <label class="form-label">Waste Level</label>
+                        <div class="progress" style="height: 30px;">
+                            <div class="progress-bar ${bin.waste_level >= 80 ? 'bg-danger' : 'bg-success'}" 
+                                 style="width: ${bin.waste_level}%">
+                                ${bin.waste_level}%
+                            </div>
+                        </div>
+                    </div>
+                    <p><strong>Last Updated:</strong> ${formatDateTime(bin.last_updated)}</p>
+                    <p><strong>Last Collected:</strong> ${bin.last_collected ? formatDateTime(bin.last_collected) : 'Never'}</p>
+                    <p><strong>Coordinates:</strong> ${bin.latitude}, ${bin.longitude}</p>
+                </div>
+            </div>
+        `;
+        
+        $('#modalBody').html(content);
+        $('#binModal').modal('show');
+    });
+}
+
+function formatDateTime(dateStr) {
+    if (!dateStr) return 'N/A';
+    const date = new Date(dateStr);
+    return date.toLocaleString();
+}
+</script>
+{% endblock %}
