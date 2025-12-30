@@ -8,6 +8,44 @@ Smart Waste Management System - Main JavaScript
 const WasteManagement = {
     
     /**
+     * Validate form inputs
+     */
+    validateForm: function(formId) {
+        const form = document.getElementById(formId);
+        if (!form) return false;
+        
+        let isValid = true;
+        const inputs = form.querySelectorAll('input[required], textarea[required], select[required]');
+        
+        inputs.forEach(input => {
+            if (!input.value.trim()) {
+                input.classList.add('is-invalid');
+                isValid = false;
+            } else {
+                input.classList.remove('is-invalid');
+            }
+        });
+        
+        return isValid;
+    },
+    
+    /**
+     * Validate email format
+     */
+    validateEmail: function(email) {
+        const re = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        return re.test(email);
+    },
+    
+    /**
+     * Validate phone number
+     */
+    validatePhone: function(phone) {
+        const re = /^[0-9]{10}$/;
+        return re.test(phone.replace(/[-\s]/g, ''));
+    },
+    
+    /**
      * Format date to readable string
      */
     formatDate: function(dateString) {
