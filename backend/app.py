@@ -16,6 +16,8 @@ import sys
 from dotenv import load_dotenv
 from datetime import datetime, timedelta
 import json
+import logging
+from logging.handlers import RotatingFileHandler
 
 # Add backend directory to path for imports
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
@@ -36,6 +38,28 @@ app = Flask(__name__,
 
 app.secret_key = os.getenv('FLASK_SECRET_KEY', 'dev-secret-key-change-in-production')
 CORS(app)
+
+# =============================================
+# LOGGING CONFIGURATION
+# =============================================
+
+if not app.debug:
+    # Create logs directory if it doesn't exist
+    if not os.path.exists('logs'):
+        os.mkdir('logs')
+    
+    # File handler for error logs
+    file_handler = RotatingFileHandler('logs/waste_management.log', 
+                                      maxBytes=10240000, 
+                                      backupCount=10)
+    file_handler.setFormatter(logging.Formatter(
+        '%(asctime)s %(levelname)s: %(message)s [in %(pathname)s:%(lineno)d]'
+    ))
+    file_handler.setLevel(logging.INFO)
+    app.logger.addHandler(file_handler)
+    
+    app.logger.setLevel(logging.INFO)
+    app.logger.info('Smart Waste Management System startup')
 
 # =============================================
 # AUTHENTICATION DECORATOR
