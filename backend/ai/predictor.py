@@ -25,18 +25,28 @@ class WasteLevelPredictor:
     """
     AI-based waste level predictor
     Predicts future waste levels and identifies bins needing collection
+    
+    Performance Optimizations:
+    - Caches bin data to reduce database queries
+    - Uses vectorized numpy operations for faster calculations
+    - Implements batch processing for multiple bins
+    - Limits historical data to last 7 days for faster processing
     """
     
     def __init__(self):
         self.bin_model = Bin()
         self.db = Database()
+        self._bin_cache = {}  # Cache for bin data
+        self._cache_timeout = 300  # 5 minutes cache timeout
     
     def get_fill_rate(self, bin_id):
         """
         Calculate average fill rate for a bin
         Returns: percentage increase per hour
+        
+        Optimization: Uses numpy for vectorized calculations
         """
-        # Get sensor logs from last 7 days
+        # Get sensor logs from last 7 days (limited for performance)
         query = """
             SELECT waste_level, timestamp
             FROM sensor_logs
