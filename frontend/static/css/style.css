@@ -20,10 +20,34 @@ Smart Waste Management System - Custom CSS
 body {
     font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
     background-color: #f8f9fa;
+    margin: 0;
+    padding: 0;
 }
 
 .content-wrapper {
     min-height: 100vh;
+    padding: 0;
+}
+
+/* Responsive Design Improvements */
+@media (max-width: 768px) {
+    body {
+        font-size: 14px;
+    }
+    
+    .container {
+        padding: 10px;
+    }
+}
+
+@media (max-width: 576px) {
+    h1 {
+        font-size: 1.75rem;
+    }
+    
+    h2 {
+        font-size: 1.5rem;
+    }
 }
 
 /* Landing Page */
