@@ -3,8 +3,11 @@
 Smart Waste Management System - Custom CSS
 ============================================
 */
-
 /* General Styles */
+/* CSS Variables for Colors */
+/* Primary: Green (#198754) */
+/* Secondary: Gray (#6c757d) */
+/* Danger: Red (#dc3545) */
 :root {
     --primary-color: #198754;
     --secondary-color: #6c757d;
