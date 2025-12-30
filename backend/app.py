@@ -85,6 +85,30 @@ def role_required(roles):
         return decorated_function
     return decorator
 
+# =============================================
+# SESSION MANAGEMENT
+# =============================================
+
+@app.before_request
+def make_session_permanent():
+    """Make session permanent with 24 hour lifetime"""
+    session.permanent = True
+    app.permanent_session_lifetime = timedelta(hours=24)
+
+@app.before_request
+def session_timeout_check():
+    """Check for session timeout and refresh"""
+    if 'user_id' in session:
+        last_activity = session.get('last_activity')
+        if last_activity:
+            # Check if session is older than 2 hours of inactivity
+            if datetime.now() - datetime.fromisoformat(last_activity) > timedelta(hours=2):
+                session.clear()
+                return redirect(url_for('login'))
+        
+        # Update last activity time
+        session['last_activity'] = datetime.now().isoformat()
+
 
 # =============================================
 # AUTHENTICATION ROUTES
