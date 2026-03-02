@@ -180,6 +180,21 @@ CREATE TABLE collection_logs (
 ) ENGINE=InnoDB;
 
 -- =========================================
+-- Table: waste_logs
+-- Purpose: Manual waste report logging for monitoring
+-- =========================================
+CREATE TABLE waste_logs (
+    log_id INT AUTO_INCREMENT PRIMARY KEY,
+    bin_id INT NOT NULL,
+    fill_level DECIMAL(5, 2) NOT NULL, -- percentage (0-100)
+    notes TEXT,
+    timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (bin_id) REFERENCES bins(bin_id) ON DELETE CASCADE,
+    INDEX idx_bin_id (bin_id),
+    INDEX idx_timestamp (timestamp)
+) ENGINE=InnoDB;
+
+-- =========================================
 -- Table: schedules
 -- Purpose: Waste collection schedules for citizens
 -- =========================================
