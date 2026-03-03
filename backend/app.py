@@ -27,6 +27,7 @@ from models import (
     User, Bin, Vehicle, Route, WasteReport, 
     Alert, Analytics, Schedule
 )
+from waste_log import WasteLog
 
 # Load environment variables
 load_dotenv()
@@ -654,6 +655,122 @@ def api_create_user():
     if result:
         return jsonify({'success': True, 'message': 'User created successfully'})
     return jsonify({'error': 'User creation failed'}), 500
+
+
+# =============================================
+# API ENDPOINTS - Waste Logs (New Feature)
+# =============================================
+
+@app.route('/api/waste-logs', methods=['GET'])
+@login_required
+def api_get_waste_logs():
+    """
+    Get all waste log entries
+    Query params: limit (default: 100)
+    """
+    try:
+        limit = request.args.get('limit', 100, type=int)
+        waste_log_model = WasteLog()
+        logs = waste_log_model.get_all_logs(limit)
+        return jsonify({'success': True, 'data': logs})
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+@app.route('/api/waste-logs/create', methods=['POST'])
+@login_required
+def api_create_waste_log():
+    """
+    Create a new waste log entry
+    Required: bin_id, fill_level
+    Optional: notes
+    """
+    try:
+        data = request.get_json()
+        
+        # Validate required fields
+        if not data.get('bin_id') or data.get('fill_level') is None:
+            return jsonify({
+                'success': False,
+                'error': 'bin_id and fill_level are required'
+            }), 400
+        
+        waste_log_model = WasteLog()
+        result = waste_log_model.create_waste_log(
+            bin_id=data.get('bin_id'),
+            fill_level=data.get('fill_level'),
+            notes=data.get('notes', '')
+        )
+        
+        if result['success']:
+            return jsonify(result), 201
+        else:
+            return jsonify(result), 400
+            
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+@app.route('/api/waste-logs/bin/<int:bin_id>', methods=['GET'])
+@login_required
+def api_get_waste_logs_by_bin(bin_id):
+    """
+    Get waste logs for a specific bin
+    Query params: limit (default: 50)
+    """
+    try:
+        limit = request.args.get('limit', 50, type=int)
+        waste_log_model = WasteLog()
+        logs = waste_log_model.get_logs_by_bin(bin_id, limit)
+        return jsonify({'success': True, 'data': logs})
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+@app.route('/api/waste-logs/recent', methods=['GET'])
+@login_required
+def api_get_recent_waste_logs():
+    """
+    Get recent waste logs
+    Query params: hours (default: 24)
+    """
+    try:
+        hours = request.args.get('hours', 24, type=int)
+        waste_log_model = WasteLog()
+        logs = waste_log_model.get_recent_logs(hours)
+        return jsonify({'success': True, 'data': logs})
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+@app.route('/api/waste-logs/<int:log_id>', methods=['GET'])
+@login_required
+def api_get_waste_log(log_id):
+    """Get a specific waste log entry by ID"""
+    try:
+        waste_log_model = WasteLog()
+        log = waste_log_model.get_log_by_id(log_id)
+        
+        if log:
+            return jsonify({'success': True, 'data': log})
+        else:
+            return jsonify({'success': False, 'error': 'Log not found'}), 404
+            
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+@app.route('/api/waste-logs/<int:log_id>', methods=['DELETE'])
+@login_required
+@role_required(['admin', 'staff'])
+def api_delete_waste_log(log_id):
+    """Delete a waste log entry (admin/staff only)"""
+    try:
+        waste_log_model = WasteLog()
+        result = waste_log_model.delete_log(log_id)
+        
+        if result['success']:
+            return jsonify(result)
+        else:
+            return jsonify(result), 404
+            
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
 
 
 # =============================================

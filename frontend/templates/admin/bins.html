@@ -48,6 +48,42 @@
         </div>
     </div>
     
+    <!-- Waste Log Entry Section (New Feature) -->
+    <div class="card mb-4 border-success">
+        <div class="card-header bg-success text-white">
+            <h5 class="mb-0"><i class="bi bi-clipboard-data"></i> Waste Report Logging</h5>
+        </div>
+        <div class="card-body">
+            <p class="text-muted">Log waste collection data for monitoring purposes</p>
+            <form id="wasteLogForm" class="row g-3">
+                <div class="col-md-4">
+                    <label for="logBinId" class="form-label">Bin <span class="text-danger">*</span></label>
+                    <select class="form-select" id="logBinId" required>
+                        <option value="">Select Bin...</option>
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <label for="logFillLevel" class="form-label">Fill Level (%) <span class="text-danger">*</span></label>
+                    <input type="number" class="form-control" id="logFillLevel" 
+                           min="0" max="100" step="0.1" placeholder="0-100" required>
+                </div>
+                <div class="col-md-5">
+                    <label for="logNotes" class="form-label">Notes (Optional)</label>
+                    <input type="text" class="form-control" id="logNotes" 
+                           placeholder="Additional notes...">
+                </div>
+                <div class="col-12">
+                    <button type="submit" class="btn btn-success">
+                        <i class="bi bi-plus-circle"></i> Submit Waste Log
+                    </button>
+                    <button type="button" class="btn btn-outline-secondary" onclick="viewWasteLogs()">
+                        <i class="bi bi-list"></i> View All Logs
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
     <!-- Bins Grid -->
     <div class="card">
         <div class="card-header bg-white">
@@ -103,7 +139,14 @@
 <script>
 $(document).ready(function() {
     loadBins();
+    loadBinsForWasteLog(); // Load bins into the waste log dropdown
     setInterval(loadBins, 60000); // Refresh every minute
+    
+    // Handle waste log form submission
+    $('#wasteLogForm').on('submit', function(e) {
+        e.preventDefault();
+        submitWasteLog();
+    });
 });
 
 function loadBins() {
@@ -193,6 +236,135 @@ function formatDateTime(dateStr) {
     if (!dateStr) return 'N/A';
     const date = new Date(dateStr);
     return date.toLocaleString();
+}
+
+// ==========================================
+// Waste Log Functions (New Feature)
+// ==========================================
+
+/**
+ * Load bins into the waste log dropdown
+ */
+function loadBinsForWasteLog() {
+    $.get('/api/bins', function(data) {
+        const select = $('#logBinId');
+        select.empty().append('<option value="">Select Bin...</option>');
+        
+        if (data && data.length > 0) {
+            data.forEach(bin => {
+                select.append(`
+                    <option value="${bin.bin_id}">
+                        ${bin.bin_code} - ${bin.location} (${bin.zone})
+                    </option>
+                `);
+            });
+        }
+    });
+}
+
+/**
+ * Submit waste log entry
+ */
+function submitWasteLog() {
+    const binId = $('#logBinId').val();
+    const fillLevel = $('#logFillLevel').val();
+    const notes = $('#logNotes').val();
+    
+    // Validate required fields
+    if (!binId || !fillLevel) {
+        alert('Please fill in all required fields');
+        return;
+    }
+    
+    // Validate fill level range
+    if (fillLevel < 0 || fillLevel > 100) {
+        alert('Fill level must be between 0 and 100');
+        return;
+    }
+    
+    // Submit the data
+    $.ajax({
+        url: '/api/waste-logs/create',
+        type: 'POST',
+        contentType: 'application/json',
+        data: JSON.stringify({
+            bin_id: parseInt(binId),
+            fill_level: parseFloat(fillLevel),
+            notes: notes
+        }),
+        success: function(response) {
+            if (response.success) {
+                alert('Waste log entry created successfully!');
+                // Reset form
+                $('#wasteLogForm')[0].reset();
+                $('#logBinId').val('');
+            } else {
+                alert('Error: ' + response.message);
+            }
+        },
+        error: function(xhr) {
+            const error = xhr.responseJSON ? xhr.responseJSON.error : 'Unknown error';
+            alert('Failed to create waste log: ' + error);
+        }
+    });
+}
+
+/**
+ * View all waste logs in a modal
+ */
+function viewWasteLogs() {
+    $.get('/api/waste-logs?limit=50', function(response) {
+        if (!response.success) {
+            alert('Failed to load waste logs');
+            return;
+        }
+        
+        const logs = response.data;
+        let content = '<h6>Recent Waste Logs (Last 50)</h6>';
+        
+        if (!logs || logs.length === 0) {
+            content += '<p class="text-muted">No waste logs found</p>';
+        } else {
+            content += `
+                <div class="table-responsive">
+                    <table class="table table-sm table-hover">
+                        <thead>
+                            <tr>
+                                <th>Bin Code</th>
+                                <th>Location</th>
+                                <th>Fill Level</th>
+                                <th>Timestamp</th>
+                                <th>Notes</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+            `;
+            
+            logs.forEach(log => {
+                const fillLevelClass = log.fill_level >= 80 ? 'danger' : 
+                                     log.fill_level >= 40 ? 'warning' : 'success';
+                content += `
+                    <tr>
+                        <td><strong>${log.bin_code || 'N/A'}</strong></td>
+                        <td>${log.location || 'N/A'}</td>
+                        <td>
+                            <span class="badge bg-${fillLevelClass}">
+                                ${log.fill_level}%
+                            </span>
+                        </td>
+                        <td>${formatDateTime(log.timestamp)}</td>
+                        <td>${log.notes || '-'}</td>
+                    </tr>
+                `;
+            });
+            
+            content += '</tbody></table></div>';
+        }
+        
+        $('#modalTitle').text('Waste Log History');
+        $('#modalBody').html(content);
+        $('#binModal').modal('show');
+    });
 }
 </script>
 {% endblock %}
