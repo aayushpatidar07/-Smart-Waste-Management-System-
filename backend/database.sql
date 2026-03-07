@@ -179,14 +179,16 @@ CREATE TABLE collection_logs (
     INDEX idx_bin (bin_id)
 ) ENGINE=InnoDB;
 
--- =========================================
+-- =============================================
 -- Table: waste_logs
--- Purpose: Manual waste report logging for monitoring
--- =========================================
+-- Purpose: Waste report logging feature for monitoring bin fill levels
+-- Description: Allows recording bin ID, fill level, and timestamp 
+--              for waste collection tracking and analysis
+-- =============================================
 CREATE TABLE waste_logs (
     log_id INT AUTO_INCREMENT PRIMARY KEY,
     bin_id INT NOT NULL,
-    fill_level DECIMAL(5, 2) NOT NULL, -- percentage (0-100)
+    fill_level DECIMAL(5, 2) NOT NULL CHECK (fill_level >= 0 AND fill_level <= 100), -- percentage (0-100)
     notes TEXT,
     timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (bin_id) REFERENCES bins(bin_id) ON DELETE CASCADE,
