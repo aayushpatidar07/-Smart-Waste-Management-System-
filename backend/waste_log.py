@@ -1,199 +1,314 @@
 """
-============================================
-Smart Waste Management System - Waste Log Service
-============================================
-Waste Report Logging Module
-Tracks waste collection data entries
-Author: Smart Waste Team
-============================================
+Waste Log Module - Enhanced Version
+Handles waste collection logging functionality for monitoring bin fill levels and timestamps.
+Professional implementation with comprehensive error handling.
 """
 
 from models import Database
-from datetime import datetime
+from datetime import datetime, timedelta
 
 
 class WasteLog:
     """
-    Waste Log Model
-    Handles logging of waste collection data with bin_id, fill_level, and timestamp
+    Waste Log Service Class
+    Provides comprehensive CRUD operations for waste collection logging.
+    Tracks bin fill levels, timestamps, and collection notes.
     """
     
-    def __init__(self):
-        """Initialize database connection"""
-        self.db = Database()
-    
-    def create_waste_log(self, bin_id, fill_level, notes=''):
+    @staticmethod
+    def create_waste_log(bin_id, fill_level, notes=None):
         """
-        Create a new waste log entry
+        Create a new waste log entry for tracking bin fill levels.
         
         Args:
-            bin_id (int): ID of the waste bin
-            fill_level (float): Current fill level percentage (0-100)
-            notes (str): Optional notes about the waste log entry
+            bin_id (int): ID of the bin being logged
+            fill_level (float): Fill level percentage (0-100)
+            notes (str, optional): Additional notes about the collection
             
         Returns:
-            dict: Result with log_id and success status
+            dict: Response with success status, log_id, and message
         """
         try:
-            # Validate fill level is within acceptable range
+            # Validate fill level range
             if not (0 <= fill_level <= 100):
                 return {
                     'success': False,
                     'message': 'Fill level must be between 0 and 100'
                 }
             
-            # Insert waste log entry
-            query = """
-                INSERT INTO waste_logs (bin_id, fill_level, notes, timestamp)
-                VALUES (%s, %s, %s, NOW())
-            """
-            result = self.db.execute_query(
-                query,
-                (bin_id, fill_level, notes),
-                fetch=False
-            )
+            # Verify bin exists in database
+            db = Database()
+            cursor = db.connection.cursor(dictionary=True)
+            cursor.execute("SELECT bin_id FROM bins WHERE bin_id = %s", (bin_id,))
+            bin_exists = cursor.fetchone()
             
-            if result and result['last_id']:
-                return {
-                    'success': True,
-                    'log_id': result['last_id'],
-                    'message': 'Waste log entry created successfully'
-                }
-            else:
+            if not bin_exists:
+                cursor.close()
+                db.close()
                 return {
                     'success': False,
-                    'message': 'Failed to create waste log entry'
+                    'message': 'Bin not found'
                 }
-                
+            
+            # Insert waste log entry
+            query = """
+                INSERT INTO waste_logs (bin_id, fill_level, notes)
+                VALUES (%s, %s, %s)
+            """
+            cursor.execute(query, (bin_id, fill_level, notes))
+            db.connection.commit()
+            log_id = cursor.lastrowid
+            
+            cursor.close()
+            db.close()
+            
+            return {
+                'success': True,
+                'message': 'Waste log created successfully',
+                'log_id': log_id
+            }
+            
         except Exception as e:
             return {
                 'success': False,
                 'message': f'Error creating waste log: {str(e)}'
             }
     
-    def get_all_logs(self, limit=100):
+    @staticmethod
+    def get_all_logs(limit=100):
         """
-        Retrieve all waste log entries
+        Retrieve all waste logs with bin details.
         
         Args:
-            limit (int): Maximum number of records to return
+            limit (int): Maximum number of logs to retrieve (default: 100)
             
         Returns:
-            list: List of waste log entries with bin details
+            dict: Response with success status and list of waste logs
         """
-        query = """
-            SELECT 
-                wl.log_id,
-                wl.bin_id,
-                b.bin_code,
-                b.location,
-                wl.fill_level,
-                wl.notes,
-                wl.timestamp
-            FROM waste_logs wl
-            LEFT JOIN bins b ON wl.bin_id = b.bin_id
-            ORDER BY wl.timestamp DESC
-            LIMIT %s
-        """
-        return self.db.execute_query(query, (limit,))
+        try:
+            db = Database()
+            cursor = db.connection.cursor(dictionary=True)
+            
+            query = """
+                SELECT 
+                    wl.log_id,
+                    wl.bin_id,
+                    b.bin_code,
+                    b.location,
+                    b.zone,
+                    wl.fill_level,
+                    wl.notes,
+                    wl.timestamp
+                FROM waste_logs wl
+                LEFT JOIN bins b ON wl.bin_id = b.bin_id
+                ORDER BY wl.timestamp DESC
+                LIMIT %s
+            """
+            cursor.execute(query, (limit,))
+            logs = cursor.fetchall()
+            
+            cursor.close()
+            db.close()
+            
+            return {
+                'success': True,
+                'data': logs
+            }
+            
+        except Exception as e:
+            return {
+                'success': False,
+                'message': f'Error retrieving waste logs: {str(e)}'
+            }
     
-    def get_logs_by_bin(self, bin_id, limit=50):
+    @staticmethod
+    def get_logs_by_bin(bin_id, limit=50):
         """
-        Retrieve waste logs for a specific bin
+        Retrieve waste logs for a specific bin.
         
         Args:
-            bin_id (int): ID of the waste bin
-            limit (int): Maximum number of records to return
+            bin_id (int): ID of the bin
+            limit (int): Maximum number of logs to retrieve (default: 50)
             
         Returns:
-            list: List of waste log entries for the specified bin
+            dict: Response with success status and list of waste logs for the bin
         """
-        query = """
-            SELECT 
-                log_id,
-                bin_id,
-                fill_level,
-                notes,
-                timestamp
-            FROM waste_logs
-            WHERE bin_id = %s
-            ORDER BY timestamp DESC
-            LIMIT %s
-        """
-        return self.db.execute_query(query, (bin_id, limit))
+        try:
+            db = Database()
+            cursor = db.connection.cursor(dictionary=True)
+            
+            query = """
+                SELECT 
+                    wl.log_id,
+                    wl.bin_id,
+                    b.bin_code,
+                    b.location,
+                    wl.fill_level,
+                    wl.notes,
+                    wl.timestamp
+                FROM waste_logs wl
+                LEFT JOIN bins b ON wl.bin_id = b.bin_id
+                WHERE wl.bin_id = %s
+                ORDER BY wl.timestamp DESC
+                LIMIT %s
+            """
+            cursor.execute(query, (bin_id, limit))
+            logs = cursor.fetchall()
+            
+            cursor.close()
+            db.close()
+            
+            return {
+                'success': True,
+                'data': logs
+            }
+            
+        except Exception as e:
+            return {
+                'success': False,
+                'message': f'Error retrieving bin logs: {str(e)}'
+            }
     
-    def get_log_by_id(self, log_id):
+    @staticmethod
+    def get_log_by_id(log_id):
         """
-        Retrieve a specific waste log entry by ID
+        Retrieve a specific waste log entry by ID.
         
         Args:
             log_id (int): ID of the waste log entry
             
         Returns:
-            dict: Waste log entry details or None
+            dict: Response with success status and log data or error message
         """
-        query = """
-            SELECT 
-                wl.log_id,
-                wl.bin_id,
-                b.bin_code,
-                b.location,
-                wl.fill_level,
-                wl.notes,
-                wl.timestamp
-            FROM waste_logs wl
-            LEFT JOIN bins b ON wl.bin_id = b.bin_id
-            WHERE wl.log_id = %s
-        """
-        result = self.db.execute_query(query, (log_id,))
-        return result[0] if result else None
-    
-    def get_recent_logs(self, hours=24):
-        """
-        Get waste logs from the last N hours
-        
-        Args:
-            hours (int): Number of hours to look back
+        try:
+            db = Database()
+            cursor = db.connection.cursor(dictionary=True)
             
-        Returns:
-            list: Recent waste log entries
-        """
-        query = """
-            SELECT 
-                wl.log_id,
-                wl.bin_id,
-                b.bin_code,
-                b.location,
-                wl.fill_level,
-                wl.notes,
-                wl.timestamp
-            FROM waste_logs wl
-            LEFT JOIN bins b ON wl.bin_id = b.bin_id
-            WHERE wl.timestamp >= DATE_SUB(NOW(), INTERVAL %s HOUR)
-            ORDER BY wl.timestamp DESC
-        """
-        return self.db.execute_query(query, (hours,))
-    
-    def delete_log(self, log_id):
-        """
-        Delete a waste log entry
-        
-        Args:
-            log_id (int): ID of the waste log entry to delete
+            query = """
+                SELECT 
+                    wl.log_id,
+                    wl.bin_id,
+                    b.bin_code,
+                    b.location,
+                    b.zone,
+                    wl.fill_level,
+                    wl.notes,
+                    wl.timestamp
+                FROM waste_logs wl
+                LEFT JOIN bins b ON wl.bin_id = b.bin_id
+                WHERE wl.log_id = %s
+            """
+            cursor.execute(query, (log_id,))
+            log = cursor.fetchone()
             
-        Returns:
-            dict: Result with success status
-        """
-        query = "DELETE FROM waste_logs WHERE log_id = %s"
-        result = self.db.execute_query(query, (log_id,), fetch=False)
-        
-        if result and result['affected_rows'] > 0:
-            return {
-                'success': True,
-                'message': 'Waste log entry deleted successfully'
-            }
-        else:
+            cursor.close()
+            db.close()
+            
+            if log:
+                return {
+                    'success': True,
+                    'data': log
+                }
+            else:
+                return {
+                    'success': False,
+                    'message': 'Waste log not found'
+                }
+            
+        except Exception as e:
             return {
                 'success': False,
-                'message': 'Failed to delete waste log entry'
+                'message': f'Error retrieving log: {str(e)}'
+            }
+    
+    @staticmethod
+    def get_recent_logs(hours=24):
+        """
+        Retrieve waste logs from the last N hours.
+        
+        Args:
+            hours (int): Number of hours to look back (default: 24)
+            
+        Returns:
+            dict: Response with success status and list of recent waste logs
+        """
+        try:
+            db = Database()
+            cursor = db.connection.cursor(dictionary=True)
+            
+            time_threshold = datetime.now() - timedelta(hours=hours)
+            
+            query = """
+                SELECT 
+                    wl.log_id,
+                    wl.bin_id,
+                    b.bin_code,
+                    b.location,
+                    b.zone,
+                    wl.fill_level,
+                    wl.notes,
+                    wl.timestamp
+                FROM waste_logs wl
+                LEFT JOIN bins b ON wl.bin_id = b.bin_id
+                WHERE wl.timestamp >= %s
+                ORDER BY wl.timestamp DESC
+            """
+            cursor.execute(query, (time_threshold,))
+            logs = cursor.fetchall()
+            
+            cursor.close()
+            db.close()
+            
+            return {
+                'success': True,
+                'data': logs
+            }
+            
+        except Exception as e:
+            return {
+                'success': False,
+                'message': f'Error retrieving recent logs: {str(e)}'
+            }
+    
+    @staticmethod
+    def delete_log(log_id):
+        """
+        Delete a waste log entry.
+        
+        Args:
+            log_id (int): ID of the log to delete
+            
+        Returns:
+            dict: Response with success status and message
+        """
+        try:
+            db = Database()
+            cursor = db.connection.cursor()
+            
+            # Check if log exists
+            cursor.execute("SELECT log_id FROM waste_logs WHERE log_id = %s", (log_id,))
+            if not cursor.fetchone():
+                cursor.close()
+                db.close()
+                return {
+                    'success': False,
+                    'message': 'Waste log not found'
+                }
+            
+            # Delete the log
+            cursor.execute("DELETE FROM waste_logs WHERE log_id = %s", (log_id,))
+            db.connection.commit()
+            
+            cursor.close()
+            db.close()
+            
+            return {
+                'success': True,
+                'message': 'Waste log deleted successfully'
+            }
+            
+        except Exception as e:
+            return {
+                'success': False,
+                'message': f'Error deleting waste log: {str(e)}'
             }

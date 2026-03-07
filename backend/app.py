@@ -665,14 +665,14 @@ def api_create_user():
 @login_required
 def api_get_waste_logs():
     """
-    Get all waste log entries
+    Get all waste log entries with bin details.
     Query params: limit (default: 100)
+    Returns: JSON with success status and data array
     """
     try:
         limit = request.args.get('limit', 100, type=int)
-        waste_log_model = WasteLog()
-        logs = waste_log_model.get_all_logs(limit)
-        return jsonify({'success': True, 'data': logs})
+        result = WasteLog.get_all_logs(limit)
+        return jsonify(result)
     except Exception as e:
         return jsonify({'success': False, 'error': str(e)}), 500
 
@@ -680,9 +680,10 @@ def api_get_waste_logs():
 @login_required
 def api_create_waste_log():
     """
-    Create a new waste log entry
-    Required: bin_id, fill_level
-    Optional: notes
+    Create a new waste log entry for tracking bin fill levels.
+    Required fields: bin_id (int), fill_level (float 0-100)
+    Optional fields: notes (string)
+    Returns: JSON with success status, log_id, and message
     """
     try:
         data = request.get_json()
@@ -694,11 +695,10 @@ def api_create_waste_log():
                 'error': 'bin_id and fill_level are required'
             }), 400
         
-        waste_log_model = WasteLog()
-        result = waste_log_model.create_waste_log(
+        result = WasteLog.create_waste_log(
             bin_id=data.get('bin_id'),
             fill_level=data.get('fill_level'),
-            notes=data.get('notes', '')
+            notes=data.get('notes')
         )
         
         if result['success']:
@@ -713,14 +713,15 @@ def api_create_waste_log():
 @login_required
 def api_get_waste_logs_by_bin(bin_id):
     """
-    Get waste logs for a specific bin
+    Get waste logs for a specific bin with bin details.
+    Path param: bin_id
     Query params: limit (default: 50)
+    Returns: JSON with success status and data array
     """
     try:
         limit = request.args.get('limit', 50, type=int)
-        waste_log_model = WasteLog()
-        logs = waste_log_model.get_logs_by_bin(bin_id, limit)
-        return jsonify({'success': True, 'data': logs})
+        result = WasteLog.get_logs_by_bin(bin_id, limit)
+        return jsonify(result)
     except Exception as e:
         return jsonify({'success': False, 'error': str(e)}), 500
 
@@ -728,29 +729,32 @@ def api_get_waste_logs_by_bin(bin_id):
 @login_required
 def api_get_recent_waste_logs():
     """
-    Get recent waste logs
+    Get recent waste logs from the last N hours.
     Query params: hours (default: 24)
+    Returns: JSON with success status and data array
     """
     try:
         hours = request.args.get('hours', 24, type=int)
-        waste_log_model = WasteLog()
-        logs = waste_log_model.get_recent_logs(hours)
-        return jsonify({'success': True, 'data': logs})
+        result = WasteLog.get_recent_logs(hours)
+        return jsonify(result)
     except Exception as e:
         return jsonify({'success': False, 'error': str(e)}), 500
 
 @app.route('/api/waste-logs/<int:log_id>', methods=['GET'])
 @login_required
 def api_get_waste_log(log_id):
-    """Get a specific waste log entry by ID"""
+    """
+    Get a specific waste log entry by ID with bin details.
+    Path param: log_id
+    Returns: JSON with success status and log data
+    """
     try:
-        waste_log_model = WasteLog()
-        log = waste_log_model.get_log_by_id(log_id)
+        result = WasteLog.get_log_by_id(log_id)
         
-        if log:
-            return jsonify({'success': True, 'data': log})
+        if result['success']:
+            return jsonify(result)
         else:
-            return jsonify({'success': False, 'error': 'Log not found'}), 404
+            return jsonify(result), 404
             
     except Exception as e:
         return jsonify({'success': False, 'error': str(e)}), 500
@@ -759,10 +763,13 @@ def api_get_waste_log(log_id):
 @login_required
 @role_required(['admin', 'staff'])
 def api_delete_waste_log(log_id):
-    """Delete a waste log entry (admin/staff only)"""
+    """
+    Delete a waste log entry (admin/staff only).
+    Path param: log_id
+    Returns: JSON with success status and message
+    """
     try:
-        waste_log_model = WasteLog()
-        result = waste_log_model.delete_log(log_id)
+        result = WasteLog.delete_log(log_id)
         
         if result['success']:
             return jsonify(result)
