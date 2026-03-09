@@ -93,8 +93,11 @@
                     <button type="button" class="btn btn-outline-info" onclick="viewWasteLogs()">
                         <i class="bi bi-table"></i> View All Logs
                     </button>
-                    <button type=\"reset\" class=\"btn btn-outline-secondary\">
-                        <i class=\"bi bi-x-circle\"></i> Clear Form
+                    <button type="button" class="btn btn-outline-primary" onclick="viewStatistics()">
+                        <i class="bi bi-bar-chart-fill"></i> View Statistics
+                    </button>
+                    <button type="reset" class="btn btn-outline-secondary">
+                        <i class="bi bi-x-circle"></i> Clear Form
                     </button>
                 </div>
             </form>
@@ -405,6 +408,169 @@ function viewWasteLogs() {
         }
         
         $('#modalTitle').text('Waste Log History');
+        $('#modalBody').html(content);
+        $('#binModal').modal('show');
+    });
+}
+
+/**
+ * View comprehensive waste logging statistics
+ */
+function viewStatistics() {
+    // Default to 7 days of statistics
+    const days = 7;
+    
+    $.get(`/api/waste-logs/statistics?days=${days}`, function(response) {
+        if (!response.success) {
+            alert('❌ Failed to load statistics: ' + (response.message || 'Unknown error'));
+            return;
+        }
+        
+        const stats = response.data;
+        const overall = stats.overall;
+        const distribution = stats.distribution;
+        const topBins = stats.top_bins;
+        
+        let content = `
+            <div class="mb-4">
+                <h6 class="text-primary">
+                    <i class="bi bi-graph-up"></i> Waste Logging Statistics
+                    <span class="badge bg-info float-end">Last ${stats.period_days} days</span>
+                </h6>
+            </div>
+            
+            <!-- Overall Statistics -->
+            <div class="row mb-4">
+                <div class="col-md-3">
+                    <div class="card border-primary">
+                        <div class="card-body text-center">
+                            <h6 class="card-subtitle mb-2 text-muted">Total Logs</h6>
+                            <h3 class="text-primary">${overall.total_logs || 0}</h3>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="card border-success">
+                        <div class="card-body text-center">
+                            <h6 class="card-subtitle mb-2 text-muted">Avg Fill Level</h6>
+                            <h3 class="text-success">${overall.avg_fill_level ? Number(overall.avg_fill_level).toFixed(1) : 0}%</h3>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="card border-warning">
+                        <div class="card-body text-center">
+                            <h6 class="card-subtitle mb-2 text-muted">Max Fill Level</h6>
+                            <h3 class="text-warning">${overall.max_fill_level ? Number(overall.max_fill_level).toFixed(1) : 0}%</h3>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="card border-info">
+                        <div class="card-body text-center">
+                            <h6 class="card-subtitle mb-2 text-muted">Bins Logged</h6>
+                            <h3 class="text-info">${overall.bins_logged || 0}</h3>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Fill Level Distribution -->
+            <div class="mb-4">
+                <h6 class="text-secondary"><i class="bi bi-pie-chart"></i> Fill Level Distribution</h6>
+                <table class="table table-sm table-bordered">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Fill Range</th>
+                            <th>Count</th>
+                            <th>Percentage</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+        `;
+        
+        const totalForPercent = overall.total_logs || 1;
+        if (distribution && distribution.length > 0) {
+            distribution.forEach(item => {
+                const percentage = ((item.count / totalForPercent) * 100).toFixed(1);
+                content += `
+                    <tr>
+                        <td>${item.fill_range}</td>
+                        <td>${item.count}</td>
+                        <td>
+                            <div class="progress" style="height: 20px;">
+                                <div class="progress-bar bg-info" role="progressbar" 
+                                     style="width: ${percentage}%" 
+                                     aria-valuenow="${percentage}" aria-valuemin="0" aria-valuemax="100">
+                                    ${percentage}%
+                                </div>
+                            </div>
+                        </td>
+                    </tr>
+                `;
+            });
+        } else {
+            content += `
+                <tr>
+                    <td colspan="3" class="text-center text-muted">No distribution data available</td>
+                </tr>
+            `;
+        }
+        
+        content += `
+                    </tbody>
+                </table>
+            </div>
+            
+            <!-- Top Bins by Log Count -->
+            <div class="mb-3">
+                <h6 class="text-secondary"><i class="bi bi-trophy"></i> Top 10 Most Logged Bins</h6>
+                <div class="table-responsive" style="max-height: 300px; overflow-y: auto;">
+                    <table class="table table-sm table-hover">
+                        <thead class="table-light sticky-top">
+                            <tr>
+                                <th>#</th>
+                                <th>Bin Code</th>
+                                <th>Location</th>
+                                <th>Zone</th>
+                                <th>Log Count</th>
+                                <th>Avg Fill</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+        `;
+        
+        if (topBins && topBins.length > 0) {
+            topBins.forEach((bin, index) => {
+                const avgFillClass = bin.avg_fill >= 70 ? 'danger' : 
+                                   bin.avg_fill >= 40 ? 'warning' : 'success';
+                content += `
+                    <tr>
+                        <td><strong>${index + 1}</strong></td>
+                        <td><code>${bin.bin_code}</code></td>
+                        <td><small>${bin.location}</small></td>
+                        <td><span class="badge bg-secondary">${bin.zone}</span></td>
+                        <td><span class="badge bg-primary">${bin.log_count}</span></td>
+                        <td><span class="badge bg-${avgFillClass}">${Number(bin.avg_fill).toFixed(1)}%</span></td>
+                    </tr>
+                `;
+            });
+        } else {
+            content += `
+                <tr>
+                    <td colspan="6" class="text-center text-muted">No bin data available</td>
+                </tr>
+            `;
+        }
+        
+        content += `
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        `;
+        
+        $('#modalTitle').text('📊 Waste Logging Analytics');
         $('#modalBody').html(content);
         $('#binModal').modal('show');
     });

@@ -312,3 +312,176 @@ class WasteLog:
                 'success': False,
                 'message': f'Error deleting waste log: {str(e)}'
             }
+    
+    @staticmethod
+    def get_statistics(days=7):
+        """
+        Get comprehensive statistics for waste logs over a specified period.
+        
+        Args:
+            days (int): Number of days to analyze (default: 7)
+            
+        Returns:
+            dict: Response with success status and statistics data
+        """
+        try:
+            db = Database()
+            cursor = db.connection.cursor(dictionary=True)
+            
+            time_threshold = datetime.now() - timedelta(days=days)
+            
+            # Get overall statistics
+            stats_query = """
+                SELECT 
+                    COUNT(*) as total_logs,
+                    AVG(fill_level) as avg_fill_level,
+                    MAX(fill_level) as max_fill_level,
+                    MIN(fill_level) as min_fill_level,
+                    COUNT(DISTINCT bin_id) as bins_logged
+                FROM waste_logs
+                WHERE timestamp >= %s
+            """
+            cursor.execute(stats_query, (time_threshold,))
+            overall_stats = cursor.fetchone()
+            
+            # Get fill level distribution
+            distribution_query = """
+                SELECT 
+                    CASE 
+                        WHEN fill_level < 25 THEN 'Low (0-25%)'
+                        WHEN fill_level < 50 THEN 'Medium (25-50%)'
+                        WHEN fill_level < 75 THEN 'High (50-75%)'
+                        ELSE 'Critical (75-100%)'
+                    END as fill_range,
+                    COUNT(*) as count
+                FROM waste_logs
+                WHERE timestamp >= %s
+                GROUP BY fill_range
+                ORDER BY 
+                    CASE 
+                        WHEN fill_level < 25 THEN 1
+                        WHEN fill_level < 50 THEN 2
+                        WHEN fill_level < 75 THEN 3
+                        ELSE 4
+                    END
+            """
+            cursor.execute(distribution_query, (time_threshold,))
+            distribution = cursor.fetchall()
+            
+            # Get top bins by log count
+            top_bins_query = """
+                SELECT 
+                    b.bin_code,
+                    b.location,
+                    b.zone,
+                    COUNT(*) as log_count,
+                    AVG(wl.fill_level) as avg_fill
+                FROM waste_logs wl
+                JOIN bins b ON wl.bin_id = b.bin_id
+                WHERE wl.timestamp >= %s
+                GROUP BY b.bin_id, b.bin_code, b.location, b.zone
+                ORDER BY log_count DESC
+                LIMIT 10
+            """
+            cursor.execute(top_bins_query, (time_threshold,))
+            top_bins = cursor.fetchall()
+            
+            cursor.close()
+            db.close()
+            
+            return {
+                'success': True,
+                'data': {
+                    'period_days': days,
+                    'overall': overall_stats,
+                    'distribution': distribution,
+                    'top_bins': top_bins
+                }
+            }
+            
+        except Exception as e:
+            return {
+                'success': False,
+                'message': f'Error retrieving statistics: {str(e)}'
+            }
+    
+    @staticmethod
+    def get_bin_history(bin_id, days=30):
+        """
+        Get fill level history for a specific bin with trend analysis.
+        
+        Args:
+            bin_id (int): ID of the bin
+            days (int): Number of days of history (default: 30)
+            
+        Returns:
+            dict: Response with success status and bin history data
+        """
+        try:
+            db = Database()
+            cursor = db.connection.cursor(dictionary=True)
+            
+            time_threshold = datetime.now() - timedelta(days=days)
+            
+            # Get bin info
+            bin_query = """
+                SELECT bin_code, location, zone, capacity
+                FROM bins
+                WHERE bin_id = %s
+            """
+            cursor.execute(bin_query, (bin_id,))
+            bin_info = cursor.fetchone()
+            
+            if not bin_info:
+                cursor.close()
+                db.close()
+                return {
+                    'success': False,
+                    'message': 'Bin not found'
+                }
+            
+            # Get history data
+            history_query = """
+                SELECT 
+                    log_id,
+                    fill_level,
+                    notes,
+                    timestamp
+                FROM waste_logs
+                WHERE bin_id = %s AND timestamp >= %s
+                ORDER BY timestamp ASC
+            """
+            cursor.execute(history_query, (bin_id, time_threshold))
+            history = cursor.fetchall()
+            
+            # Calculate trend statistics
+            if history:
+                fill_levels = [record['fill_level'] for record in history]
+                avg_fill = sum(fill_levels) / len(fill_levels)
+                trend = 'increasing' if len(fill_levels) > 1 and fill_levels[-1] > fill_levels[0] else 'decreasing'
+            else:
+                avg_fill = 0
+                trend = 'no_data'
+            
+            cursor.close()
+            db.close()
+            
+            return {
+                'success': True,
+                'data': {
+                    'bin_info': bin_info,
+                    'history': history,
+                    'analytics': {
+                        'total_logs': len(history),
+                        'average_fill_level': round(avg_fill, 2) if history else 0,
+                        'trend': trend,
+                        'period_days': days
+                    }
+                }
+            }
+            
+        except Exception as e:
+            return {
+                'success': False,
+                'message': f'Error retrieving bin history: {str(e)}'
+            }
