@@ -779,6 +779,58 @@ def api_delete_waste_log(log_id):
     except Exception as e:
         return jsonify({'success': False, 'error': str(e)}), 500
 
+@app.route('/api/waste-logs/statistics', methods=['GET'])
+@login_required
+def api_get_waste_log_statistics():
+    """
+    Get comprehensive waste log statistics and analytics.
+    Query params: days (default: 7) - number of days to analyze
+    Returns: JSON with statistics including distribution, trends, and top bins
+    """
+    try:
+        days = request.args.get('days', 7, type=int)
+        
+        # Validate days parameter
+        if days < 1 or days > 365:
+            return jsonify({
+                'success': False,
+                'error': 'Days parameter must be between 1 and 365'
+            }), 400
+        
+        result = WasteLog.get_statistics(days)
+        return jsonify(result)
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+@app.route('/api/waste-logs/bin-history/<int:bin_id>', methods=['GET'])
+@login_required
+def api_get_bin_history(bin_id):
+    """
+    Get fill level history and trend analysis for a specific bin.
+    Path param: bin_id
+    Query params: days (default: 30) - number of days of history
+    Returns: JSON with bin history, analytics, and trend data
+    """
+    try:
+        days = request.args.get('days', 30, type=int)
+        
+        # Validate days parameter
+        if days < 1 or days > 365:
+            return jsonify({
+                'success': False,
+                'error': 'Days parameter must be between 1 and 365'
+            }), 400
+        
+        result = WasteLog.get_bin_history(bin_id, days)
+        
+        if result['success']:
+            return jsonify(result)
+        else:
+            return jsonify(result), 404
+            
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
 
 # =============================================
 # ERROR HANDLERS
