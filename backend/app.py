@@ -831,6 +831,108 @@ def api_get_bin_history(bin_id):
     except Exception as e:
         return jsonify({'success': False, 'error': str(e)}), 500
 
+@app.route('/api/waste-logs/<int:log_id>', methods=['PUT', 'PATCH'])
+@login_required
+@role_required(['admin', 'staff'])
+def api_update_waste_log(log_id):
+    """
+    Update an existing waste log entry (admin/staff only).
+    Path param: log_id
+    Body: fill_level (optional), notes (optional)
+    Returns: JSON with success status and message
+    """
+    try:
+        data = request.get_json()
+        
+        fill_level = data.get('fill_level')
+        notes = data.get('notes')
+        
+        result = WasteLog.update_waste_log(log_id, fill_level, notes)
+        
+        if result['success']:
+            return jsonify(result)
+        else:
+            return jsonify(result), 400
+            
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+@app.route('/api/waste-logs/bulk-create', methods=['POST'])
+@login_required
+@role_required(['admin', 'staff'])
+def api_bulk_create_waste_logs():
+    """
+    Create multiple waste log entries at once (admin/staff only).
+    Body: log_entries (array of objects with bin_id, fill_level, notes)
+    Returns: JSON with success status, created count, and errors
+    """
+    try:
+        data = request.get_json()
+        log_entries = data.get('log_entries', [])
+        
+        if not log_entries:
+            return jsonify({
+                'success': False,
+                'error': 'log_entries array is required'
+            }), 400
+        
+        result = WasteLog.bulk_create_logs(log_entries)
+        
+        if result['success']:
+            return jsonify(result), 201
+        else:
+            return jsonify(result), 400
+            
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+@app.route('/api/waste-logs/zone-statistics/<string:zone>', methods=['GET'])
+@login_required
+def api_get_zone_statistics(zone):
+    """
+    Get waste log statistics for a specific zone.
+    Path param: zone - zone name to analyze
+    Query params: days (default: 7) - number of days to analyze
+    Returns: JSON with zone-specific statistics and bin details
+    """
+    try:
+        days = request.args.get('days', 7, type=int)
+        
+        # Validate days parameter
+        if days < 1 or days > 365:
+            return jsonify({
+                'success': False,
+                'error': 'Days parameter must be between 1 and 365'
+            }), 400
+        
+        result = WasteLog.get_zone_statistics(zone, days)
+        return jsonify(result)
+        
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+@app.route('/api/waste-logs/export', methods=['GET'])
+@login_required
+def api_export_waste_logs():
+    """
+    Export waste logs data with flexible filtering.
+    Query params: 
+        - start_date (YYYY-MM-DD format)
+        - end_date (YYYY-MM-DD format)
+        - zone (zone name filter)
+    Returns: JSON with exportable log data (max 10000 records)
+    """
+    try:
+        start_date = request.args.get('start_date')
+        end_date = request.args.get('end_date')
+        zone = request.args.get('zone')
+        
+        result = WasteLog.export_logs_data(start_date, end_date, zone)
+        return jsonify(result)
+        
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
 
 # =============================================
 # ERROR HANDLERS
