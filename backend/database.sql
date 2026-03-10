@@ -187,7 +187,11 @@ CREATE TABLE collection_logs (
 --              - Historical trend analysis
 --              - Predictive maintenance insights
 --              - Performance metrics and reporting
--- Features: Automatic timestamping, cascading deletes, optimized indexes
+--              - Bulk import/export capabilities
+--              - Zone-based analytics
+--              - Update and modification tracking
+-- Features: Automatic timestamping, cascading deletes, optimized indexes, bulk operations support
+-- Version: 2.0 - Enhanced with update support and advanced analytics
 -- =============================================
 CREATE TABLE waste_logs (
     log_id INT AUTO_INCREMENT PRIMARY KEY,
@@ -199,12 +203,35 @@ CREATE TABLE waste_logs (
     -- Foreign key constraints
     FOREIGN KEY (bin_id) REFERENCES bins(bin_id) ON DELETE CASCADE,
     
-    -- Performance indexes
-    INDEX idx_bin_id (bin_id),
-    INDEX idx_timestamp (timestamp),
-    INDEX idx_fill_level (fill_level),
-    INDEX idx_bin_timestamp (bin_id, timestamp) -- Composite index for history queries
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+    -- Performance indexes for optimized queries
+    INDEX idx_bin_id (bin_id),                      -- Single bin lookups
+    INDEX idx_timestamp (timestamp),                 -- Time-based queries
+    INDEX idx_fill_level (fill_level),              -- Fill level filtering
+    INDEX idx_bin_timestamp (bin_id, timestamp)     -- Composite index for history queries
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci 
+COMMENT='Waste collection logging with advanced analytics and bulk operations support';
+
+-- =============================================
+-- Optional View: Recent High-Priority Waste Logs
+-- Purpose: Quick access to bins with critical fill levels in the last 24 hours
+-- Usage: SELECT * FROM vw_critical_waste_logs;
+-- =============================================
+-- CREATE OR REPLACE VIEW vw_critical_waste_logs AS
+-- SELECT 
+--     wl.log_id,
+--     b.bin_code,
+--     b.location,
+--     b.zone,
+--     wl.fill_level,
+--     wl.timestamp,
+--     wl.notes
+-- FROM waste_logs wl
+-- JOIN bins b ON wl.bin_id = b.bin_id
+-- WHERE wl.fill_level >= 80
+--   AND wl.timestamp >= DATE_SUB(NOW(), INTERVAL 24 HOUR)
+-- ORDER BY wl.fill_level DESC, wl.timestamp DESC;
+
+-- Note: Uncomment the view creation above if needed for quick dashboard queries
 
 -- =========================================
 -- Table: schedules

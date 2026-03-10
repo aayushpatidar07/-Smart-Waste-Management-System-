@@ -87,18 +87,30 @@
                     <div class="form-text">Additional details about the collection</div>
                 </div>
                 <div class="col-12">
-                    <button type="submit" class="btn btn-success">
-                        <i class="bi bi-plus-circle-fill"></i> Submit Waste Log
-                    </button>
-                    <button type="button" class="btn btn-outline-info" onclick="viewWasteLogs()">
-                        <i class="bi bi-table"></i> View All Logs
-                    </button>
-                    <button type="button" class="btn btn-outline-primary" onclick="viewStatistics()">
-                        <i class="bi bi-bar-chart-fill"></i> View Statistics
-                    </button>
-                    <button type="reset" class="btn btn-outline-secondary">
-                        <i class="bi bi-x-circle"></i> Clear Form
-                    </button>
+                    <div class="btn-group me-2" role="group">
+                        <button type="submit" class="btn btn-success">
+                            <i class="bi bi-plus-circle-fill"></i> Submit Log
+                        </button>
+                        <button type="reset" class="btn btn-outline-secondary">
+                            <i class="bi bi-x-circle"></i> Clear
+                        </button>
+                    </div>
+                    <div class="btn-group me-2" role="group">
+                        <button type="button" class="btn btn-outline-info" onclick="viewWasteLogs()">
+                            <i class="bi bi-table"></i> View Logs
+                        </button>
+                        <button type="button" class="btn btn-outline-primary" onclick="viewStatistics()">
+                            <i class="bi bi-bar-chart-fill"></i> Statistics
+                        </button>
+                        <button type="button" class="btn btn-outline-warning" onclick="viewZoneStats()">
+                            <i class="bi bi-geo-alt-fill"></i> By Zone
+                        </button>
+                    </div>
+                    <div class="btn-group" role="group">
+                        <button type="button" class="btn btn-outline-success" onclick="exportLogs()">
+                            <i class="bi bi-download"></i> Export
+                        </button>
+                    </div>
                 </div>
             </form>
         </div>
@@ -573,6 +585,237 @@ function viewStatistics() {
         $('#modalTitle').text('📊 Waste Logging Analytics');
         $('#modalBody').html(content);
         $('#binModal').modal('show');
+    });
+}
+
+/**
+ * View zone-specific waste logging statistics
+ */
+function viewZoneStats() {
+    // Prompt user to select a zone
+    const zone = prompt('Enter zone name (e.g., North, South, East, West):');
+    
+    if (!zone) {
+        return;
+    }
+    
+    const days = 7; // Default 7 days
+    
+    $.get(`/api/waste-logs/zone-statistics/${encodeURIComponent(zone)}?days=${days}`, function(response) {
+        if (!response.success) {
+            alert('❌ Failed to load zone statistics: ' + (response.message || 'Unknown error'));
+            return;
+        }
+        
+        const data = response.data;
+        const stats = data.statistics;
+        const bins = data.bins;
+        
+        let content = `
+            <div class="mb-4">
+                <h6 class="text-primary">
+                    <i class="bi bi-geo-alt-fill"></i> Zone: <strong>${data.zone}</strong>
+                    <span class="badge bg-info float-end">Last ${data.period_days} days</span>
+                </h6>
+            </div>
+        `;
+        
+        if (!stats) {
+            content += `
+                <div class="alert alert-warning">
+                    <i class="bi bi-exclamation-triangle"></i> ${data.message || 'No data available for this zone'}
+                </div>
+            `;
+        } else {
+            content += `
+                <!-- Zone Statistics -->
+                <div class="row mb-4">
+                    <div class="col-md-4">
+                        <div class="card border-primary">
+                            <div class="card-body text-center">
+                                <h6 class="card-subtitle mb-2 text-muted">Total Logs</h6>
+                                <h3 class="text-primary">${stats.total_logs || 0}</h3>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="card border-success">
+                            <div class="card-body text-center">
+                                <h6 class="card-subtitle mb-2 text-muted">Avg Fill Level</h6>
+                                <h3 class="text-success">${stats.avg_fill_level ? Number(stats.avg_fill_level).toFixed(1) : 0}%</h3>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="card border-info">
+                            <div class="card-body text-center">
+                                <h6 class="card-subtitle mb-2 text-muted">Bins in Zone</h6>
+                                <h3 class="text-info">${stats.bins_in_zone || 0}</h3>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Bins in Zone -->
+                <div class="mb-3">
+                    <h6 class="text-secondary"><i class="bi bi-trash"></i> Bins in ${data.zone}</h6>
+                    <div class="table-responsive" style="max-height: 350px; overflow-y: auto;">
+                        <table class="table table-sm table-hover table-striped">
+                            <thead class="table-light sticky-top">
+                                <tr>
+                                    <th>Bin Code</th>
+                                    <th>Location</th>
+                                    <th>Log Count</th>
+                                    <th>Avg Fill</th>
+                                    <th>Last Logged</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+            `;
+            
+            if (bins && bins.length > 0) {
+                bins.forEach(bin => {
+                    const avgFillClass = bin.avg_fill >= 70 ? 'danger' : 
+                                       bin.avg_fill >= 40 ? 'warning' : 'success';
+                    content += `
+                        <tr>
+                            <td><code>${bin.bin_code}</code></td>
+                            <td><small>${bin.location}</small></td>
+                            <td><span class="badge bg-primary">${bin.log_count}</span></td>
+                            <td><span class="badge bg-${avgFillClass}">${Number(bin.avg_fill).toFixed(1)}%</span></td>
+                            <td><small>${formatDateTime(bin.last_logged)}</small></td>
+                        </tr>
+                    `;
+                });
+            } else {
+                content += `
+                    <tr>
+                        <td colspan="5" class="text-center text-muted">No bins found</td>
+                    </tr>
+                `;
+            }
+            
+            content += `
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            `;
+        }
+        
+        $('#modalTitle').text(`🗺️ Zone Statistics: ${data.zone}`);
+        $('#modalBody').html(content);
+        $('#binModal').modal('show');
+    }).fail(function() {
+        alert('❌ Failed to load zone statistics. Please check the zone name.');
+    });
+}
+
+/**
+ * Export waste logs with filtering options
+ */
+function exportLogs() {
+    // Create export options modal
+    const content = `
+        <div class="mb-3">
+            <p class="text-muted">Export waste log data with optional filters (max 10,000 records)</p>
+            <form id="exportForm" class="row g-3">
+                <div class="col-md-6">
+                    <label for="exportStartDate" class="form-label">Start Date (Optional)</label>
+                    <input type="date" class="form-control" id="exportStartDate">
+                </div>
+                <div class="col-md-6">
+                    <label for="exportEndDate" class="form-label">End Date (Optional)</label>
+                    <input type="date" class="form-control" id="exportEndDate">
+                </div>
+                <div class="col-md-12">
+                    <label for="exportZone" class="form-label">Zone Filter (Optional)</label>
+                    <input type="text" class="form-control" id="exportZone" 
+                           placeholder="Leave empty for all zones">
+                </div>
+                <div class="col-12">
+                    <button type="button" class="btn btn-success" onclick="performExport()">
+                        <i class="bi bi-download"></i> Download Data
+                    </button>
+                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">
+                        Cancel
+                    </button>
+                </div>
+            </form>
+        </div>
+    `;
+    
+    $('#modalTitle').text('📥 Export Waste Logs');
+    $('#modalBody').html(content);
+    $('#binModal').modal('show');
+}
+
+/**
+ * Perform the actual export
+ */
+function performExport() {
+    const startDate = $('#exportStartDate').val();
+    const endDate = $('#exportEndDate').val();
+    const zone = $('#exportZone').val();
+    
+    // Build query parameters
+    let params = [];
+    if (startDate) params.push(`start_date=${startDate}`);
+    if (endDate) params.push(`end_date=${endDate}`);
+    if (zone) params.push(`zone=${encodeURIComponent(zone)}`);
+    
+    const queryString = params.length > 0 ? '?' + params.join('&') : '';
+    
+    $.get(`/api/waste-logs/export${queryString}`, function(response) {
+        if (!response.success) {
+            alert('❌ Export failed: ' + (response.message || 'Unknown error'));
+            return;
+        }
+        
+        const logs = response.data;
+        
+        if (!logs || logs.length === 0) {
+            alert('⚠️ No data found matching the filter criteria');
+            return;
+        }
+        
+        // Convert to CSV
+        const headers = ['Log ID', 'Bin Code', 'Location', 'Zone', 'Capacity', 'Fill Level %', 'Notes', 'Date', 'Time'];
+        let csv = headers.join(',') + '\\n';
+        
+        logs.forEach(log => {
+            const row = [
+                log.log_id,
+                `"${log.bin_code || 'N/A'}"`,
+                `"${log.location || 'N/A'}"`,
+                `"${log.zone || 'N/A'}"`,
+                log.capacity || 'N/A',
+                log.fill_level,
+                `"${(log.notes || '').replace(/"/g, '""')}"`, // Escape quotes
+                log.log_date || '',
+                log.log_time || ''
+            ];
+            csv += row.join(',') + '\\n';
+        });
+        
+        // Download CSV file
+        const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+        const link = document.createElement('a');
+        const url = URL.createObjectURL(blob);
+        
+        const timestamp = new Date().toISOString().slice(0, 10);
+        link.setAttribute('href', url);
+        link.setAttribute('download', `waste_logs_export_${timestamp}.csv`);
+        link.style.visibility = 'hidden';
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        
+        alert(`✅ Successfully exported ${logs.length} waste log records!`);
+        $('#binModal').modal('hide');
+        
+    }).fail(function() {
+        alert('❌ Export failed. Please try again.');
     });
 }
 </script>

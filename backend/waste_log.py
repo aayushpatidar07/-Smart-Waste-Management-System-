@@ -485,3 +485,299 @@ class WasteLog:
                 'success': False,
                 'message': f'Error retrieving bin history: {str(e)}'
             }
+    
+    @staticmethod
+    def update_waste_log(log_id, fill_level=None, notes=None):
+        """
+        Update an existing waste log entry.
+        
+        Args:
+            log_id (int): ID of the log to update
+            fill_level (float, optional): New fill level percentage (0-100)
+            notes (str, optional): New notes
+            
+        Returns:
+            dict: Response with success status and message
+        """
+        try:
+            # Validate fill level if provided
+            if fill_level is not None and not (0 <= fill_level <= 100):
+                return {
+                    'success': False,
+                    'message': 'Fill level must be between 0 and 100'
+                }
+            
+            db = Database()
+            cursor = db.connection.cursor(dictionary=True)
+            
+            # Check if log exists
+            cursor.execute("SELECT log_id FROM waste_logs WHERE log_id = %s", (log_id,))
+            if not cursor.fetchone():
+                cursor.close()
+                db.close()
+                return {
+                    'success': False,
+                    'message': 'Waste log not found'
+                }
+            
+            # Build update query dynamically based on provided fields
+            update_fields = []
+            params = []
+            
+            if fill_level is not None:
+                update_fields.append("fill_level = %s")
+                params.append(fill_level)
+            
+            if notes is not None:
+                update_fields.append("notes = %s")
+                params.append(notes)
+            
+            if not update_fields:
+                cursor.close()
+                db.close()
+                return {
+                    'success': False,
+                    'message': 'No fields to update'
+                }
+            
+            # Execute update
+            params.append(log_id)
+            query = f"UPDATE waste_logs SET {', '.join(update_fields)} WHERE log_id = %s"
+            cursor.execute(query, params)
+            db.connection.commit()
+            
+            cursor.close()
+            db.close()
+            
+            return {
+                'success': True,
+                'message': 'Waste log updated successfully'
+            }
+            
+        except Exception as e:
+            return {
+                'success': False,
+                'message': f'Error updating waste log: {str(e)}'
+            }
+    
+    @staticmethod
+    def bulk_create_logs(log_entries):
+        """
+        Create multiple waste log entries at once for efficient batch processing.
+        
+        Args:
+            log_entries (list): List of dicts with keys: bin_id, fill_level, notes (optional)
+            
+        Returns:
+            dict: Response with success status, created count, and any errors
+        """
+        try:
+            if not log_entries or not isinstance(log_entries, list):
+                return {
+                    'success': False,
+                    'message': 'Invalid log entries data'
+                }
+            
+            db = Database()
+            cursor = db.connection.cursor()
+            
+            created_count = 0
+            errors = []
+            
+            for idx, entry in enumerate(log_entries):
+                try:
+                    bin_id = entry.get('bin_id')
+                    fill_level = entry.get('fill_level')
+                    notes = entry.get('notes')
+                    
+                    # Validate entry
+                    if not bin_id or fill_level is None:
+                        errors.append(f"Entry {idx + 1}: Missing required fields")
+                        continue
+                    
+                    if not (0 <= fill_level <= 100):
+                        errors.append(f"Entry {idx + 1}: Fill level must be between 0 and 100")
+                        continue
+                    
+                    # Insert log
+                    query = """
+                        INSERT INTO waste_logs (bin_id, fill_level, notes)
+                        VALUES (%s, %s, %s)
+                    """
+                    cursor.execute(query, (bin_id, fill_level, notes))
+                    created_count += 1
+                    
+                except Exception as e:
+                    errors.append(f"Entry {idx + 1}: {str(e)}")
+            
+            db.connection.commit()
+            cursor.close()
+            db.close()
+            
+            return {
+                'success': True,
+                'message': f'Bulk import completed: {created_count} created',
+                'created_count': created_count,
+                'total_entries': len(log_entries),
+                'errors': errors if errors else None
+            }
+            
+        except Exception as e:
+            return {
+                'success': False,
+                'message': f'Error in bulk create: {str(e)}'
+            }
+    
+    @staticmethod
+    def get_zone_statistics(zone, days=7):
+        """
+        Get statistics for waste logs in a specific zone.
+        
+        Args:
+            zone (str): Zone name to analyze
+            days (int): Number of days to analyze (default: 7)
+            
+        Returns:
+            dict: Response with zone-specific statistics
+        """
+        try:
+            db = Database()
+            cursor = db.connection.cursor(dictionary=True)
+            
+            time_threshold = datetime.now() - timedelta(days=days)
+            
+            # Get zone statistics
+            stats_query = """
+                SELECT 
+                    b.zone,
+                    COUNT(wl.log_id) as total_logs,
+                    AVG(wl.fill_level) as avg_fill_level,
+                    MAX(wl.fill_level) as max_fill_level,
+                    MIN(wl.fill_level) as min_fill_level,
+                    COUNT(DISTINCT wl.bin_id) as bins_in_zone
+                FROM waste_logs wl
+                JOIN bins b ON wl.bin_id = b.bin_id
+                WHERE b.zone = %s AND wl.timestamp >= %s
+                GROUP BY b.zone
+            """
+            cursor.execute(stats_query, (zone, time_threshold))
+            zone_stats = cursor.fetchone()
+            
+            # Get bin-level details for the zone
+            bins_query = """
+                SELECT 
+                    b.bin_code,
+                    b.location,
+                    COUNT(wl.log_id) as log_count,
+                    AVG(wl.fill_level) as avg_fill,
+                    MAX(wl.timestamp) as last_logged
+                FROM waste_logs wl
+                JOIN bins b ON wl.bin_id = b.bin_id
+                WHERE b.zone = %s AND wl.timestamp >= %s
+                GROUP BY b.bin_id, b.bin_code, b.location
+                ORDER BY log_count DESC
+            """
+            cursor.execute(bins_query, (zone, time_threshold))
+            bins_in_zone = cursor.fetchall()
+            
+            cursor.close()
+            db.close()
+            
+            if not zone_stats:
+                return {
+                    'success': True,
+                    'data': {
+                        'zone': zone,
+                        'message': 'No logs found for this zone in the specified period',
+                        'bins': []
+                    }
+                }
+            
+            return {
+                'success': True,
+                'data': {
+                    'zone': zone,
+                    'period_days': days,
+                    'statistics': zone_stats,
+                    'bins': bins_in_zone
+                }
+            }
+            
+        except Exception as e:
+            return {
+                'success': False,
+                'message': f'Error retrieving zone statistics: {str(e)}'
+            }
+    
+    @staticmethod
+    def export_logs_data(start_date=None, end_date=None, zone=None):
+        """
+        Export waste logs data with flexible filtering for reporting.
+        
+        Args:
+            start_date (str, optional): Start date (YYYY-MM-DD format)
+            end_date (str, optional): End date (YYYY-MM-DD format)
+            zone (str, optional): Filter by zone
+            
+        Returns:
+            dict: Response with exportable log data
+        """
+        try:
+            db = Database()
+            cursor = db.connection.cursor(dictionary=True)
+            
+            # Build query with optional filters
+            query = """
+                SELECT 
+                    wl.log_id,
+                    b.bin_code,
+                    b.location,
+                    b.zone,
+                    b.capacity,
+                    wl.fill_level,
+                    wl.notes,
+                    wl.timestamp,
+                    DATE_FORMAT(wl.timestamp, '%Y-%m-%d') as log_date,
+                    TIME_FORMAT(wl.timestamp, '%H:%i:%s') as log_time
+                FROM waste_logs wl
+                LEFT JOIN bins b ON wl.bin_id = b.bin_id
+                WHERE 1=1
+            """
+            params = []
+            
+            if start_date:
+                query += " AND DATE(wl.timestamp) >= %s"
+                params.append(start_date)
+            
+            if end_date:
+                query += " AND DATE(wl.timestamp) <= %s"
+                params.append(end_date)
+            
+            if zone:
+                query += " AND b.zone = %s"
+                params.append(zone)
+            
+            query += " ORDER BY wl.timestamp DESC LIMIT 10000"
+            
+            cursor.execute(query, params)
+            logs = cursor.fetchall()
+            
+            cursor.close()
+            db.close()
+            
+            return {
+                'success': True,
+                'data': logs,
+                'count': len(logs),
+                'filters': {
+                    'start_date': start_date,
+                    'end_date': end_date,
+                    'zone': zone
+                }
+            }
+            
+        except Exception as e:
+            return {
+                'success': False,
+                'message': f'Error exporting logs: {str(e)}'
+            }
