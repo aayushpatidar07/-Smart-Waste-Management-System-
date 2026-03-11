@@ -50,6 +50,78 @@ Get optimized collection routes
 - **Auth**: Required
 - **Response**: `[{ "route_id": int, "bins": [], "distance": float }]`
 
+### Waste Logs Management
+
+#### GET /api/waste-logs
+Get all waste logs (with optional limit)
+- **Auth**: Required
+- **Query Params**: `limit` (optional, default: 100)
+- **Response**: `{ "success": true, "data": [{ "log_id": int, "bin_id": int, "fill_level": float, "timestamp": "string", "notes": "string" }] }`
+
+#### POST /api/waste-logs/create
+Create a new waste log entry
+- **Auth**: Required
+- **Body**: `{ "bin_id": int, "fill_level": float, "notes": "string" }`
+- **Response**: `{ "success": true, "log_id": int }`
+
+#### PUT/PATCH /api/waste-logs/{id}
+Update an existing waste log
+- **Auth**: Required
+- **Body**: `{ "fill_level": float, "notes": "string" }`
+- **Response**: `{ "success": true, "message": "string" }`
+
+#### DELETE /api/waste-logs/{id}
+Delete a waste log entry
+- **Auth**: Required (Admin/Staff only)
+- **Response**: `{ "success": true, "message": "string" }`
+
+#### POST /api/waste-logs/bulk-create
+Create multiple waste logs in one request
+- **Auth**: Required
+- **Body**: `{ "logs": [{ "bin_id": int, "fill_level": float, "notes": "string" }] }`
+- **Response**: `{ "success": true, "created": int, "errors": [] }`
+
+#### GET /api/waste-logs/statistics
+Get overall waste logging statistics
+- **Auth**: Required
+- **Response**: `{ "success": true, "data": { "total_logs": int, "avg_fill_level": float, "bins_logged": int, "distribution": {} } }`
+
+#### GET /api/waste-logs/bin-history/{bin_id}
+Get historical trend data for a specific bin
+- **Auth**: Required
+- **Query Params**: `days` (optional, default: 30)
+- **Response**: `{ "success": true, "data": { "bin_info": {}, "history": [], "trend": {} } }`
+
+#### GET /api/waste-logs/zone-statistics/{zone}
+Get aggregated statistics for a specific zone
+- **Auth**: Required
+- **Query Params**: `days` (optional, default: 30)
+- **Response**: `{ "success": true, "data": { "zone": "string", "total_bins": int, "total_logs": int, "statistics": {} } }`
+
+#### GET /api/waste-logs/export
+Export waste logs data with filtering options
+- **Auth**: Required
+- **Query Params**: `start_date` (YYYY-MM-DD), `end_date` (YYYY-MM-DD), `zone` (optional)
+- **Response**: `{ "success": true, "data": [], "filters": {} }`
+
+#### GET /api/waste-logs/alerts
+Get bins exceeding fill level threshold for alerts
+- **Auth**: Required
+- **Query Params**: `threshold` (default: 80), `hours` (default: 24)
+- **Response**: `{ "success": true, "data": [], "count": int, "threshold": float, "hours_checked": int }`
+
+#### GET /api/waste-logs/efficiency
+Analyze collection efficiency metrics
+- **Auth**: Required
+- **Query Params**: `days` (default: 30)
+- **Response**: `{ "success": true, "data": { "overall_metrics": {}, "bin_efficiency": [] } }`
+
+#### GET /api/waste-logs/daily-summary
+Get comprehensive daily summary of waste logging activity
+- **Auth**: Required
+- **Query Params**: `date` (YYYY-MM-DD, optional, default: today)
+- **Response**: `{ "success": true, "data": { "date": "string", "summary": {}, "hourly_distribution": [], "zone_breakdown": [] } }`
+
 ### Reports
 
 #### GET /api/reports
