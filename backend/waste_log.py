@@ -781,3 +781,231 @@ class WasteLog:
                 'success': False,
                 'message': f'Error exporting logs: {str(e)}'
             }
+    
+    @staticmethod
+    def get_alerts_by_threshold(threshold=80, hours=24):
+        """
+        Get bins that have exceeded a fill level threshold in recent logs.
+        Useful for generating alerts and prioritizing collection routes.
+        
+        Args:
+            threshold (float): Fill level threshold percentage (default: 80)
+            hours (int): Number of hours to look back (default: 24)
+            
+        Returns:
+            dict: Response with bins exceeding threshold
+        """
+        try:
+            db = Database()
+            cursor = db.connection.cursor(dictionary=True)
+            
+            time_threshold = datetime.now() - timedelta(hours=hours)
+            
+            query = """
+                SELECT 
+                    b.bin_id,
+                    b.bin_code,
+                    b.location,
+                    b.zone,
+                    b.capacity,
+                    wl.fill_level,
+                    wl.timestamp,
+                    wl.notes
+                FROM waste_logs wl
+                JOIN bins b ON wl.bin_id = b.bin_id
+                WHERE wl.fill_level >= %s 
+                  AND wl.timestamp >= %s
+                  AND wl.log_id IN (
+                      SELECT MAX(log_id) 
+                      FROM waste_logs 
+                      WHERE timestamp >= %s
+                      GROUP BY bin_id
+                  )
+                ORDER BY wl.fill_level DESC, wl.timestamp DESC
+            """
+            cursor.execute(query, (threshold, time_threshold, time_threshold))
+            alerts = cursor.fetchall()
+            
+            cursor.close()
+            db.close()
+            
+            return {
+                'success': True,
+                'data': alerts,
+                'count': len(alerts),
+                'threshold': threshold,
+                'hours_checked': hours
+            }
+            
+        except Exception as e:
+            return {
+                'success': False,
+                'message': f'Error retrieving alerts: {str(e)}'
+            }
+    
+    @staticmethod
+    def get_collection_efficiency(days=30):
+        """
+        Analyze collection efficiency by measuring time between high fill levels.
+        Helps optimize collection schedules and route planning.
+        
+        Args:
+            days (int): Number of days to analyze (default: 30)
+            
+        Returns:
+            dict: Response with efficiency metrics and recommendations
+        """
+        try:
+            db = Database()
+            cursor = db.connection.cursor(dictionary=True)
+            
+            time_threshold = datetime.now() - timedelta(days=days)
+            
+            # Get bins with multiple log entries
+            efficiency_query = """
+                SELECT 
+                    b.bin_id,
+                    b.bin_code,
+                    b.location,
+                    b.zone,
+                    COUNT(wl.log_id) as log_count,
+                    AVG(wl.fill_level) as avg_fill,
+                    MAX(wl.fill_level) as max_fill,
+                    MIN(wl.fill_level) as min_fill,
+                    STDDEV(wl.fill_level) as fill_variance,
+                    DATEDIFF(MAX(wl.timestamp), MIN(wl.timestamp)) as days_logged,
+                    CASE 
+                        WHEN COUNT(wl.log_id) >= 10 THEN 'High Activity'
+                        WHEN COUNT(wl.log_id) >= 5 THEN 'Medium Activity'
+                        ELSE 'Low Activity'
+                    END as activity_level
+                FROM waste_logs wl
+                JOIN bins b ON wl.bin_id = b.bin_id
+                WHERE wl.timestamp >= %s
+                GROUP BY b.bin_id, b.bin_code, b.location, b.zone
+                HAVING log_count >= 2
+                ORDER BY log_count DESC, avg_fill DESC
+                LIMIT 50
+            """
+            cursor.execute(efficiency_query, (time_threshold,))
+            efficiency_data = cursor.fetchall()
+            
+            # Calculate overall efficiency metrics
+            if efficiency_data:
+                total_bins_analyzed = len(efficiency_data)
+                avg_logs_per_bin = sum(row['log_count'] for row in efficiency_data) / total_bins_analyzed
+                high_activity_bins = sum(1 for row in efficiency_data if row['activity_level'] == 'High Activity')
+                
+                overall_metrics = {
+                    'total_bins_analyzed': total_bins_analyzed,
+                    'average_logs_per_bin': round(avg_logs_per_bin, 2),
+                    'high_activity_bins': high_activity_bins,
+                    'analysis_period_days': days
+                }
+            else:
+                overall_metrics = {
+                    'message': 'Insufficient data for efficiency analysis',
+                    'analysis_period_days': days
+                }
+            
+            cursor.close()
+            db.close()
+            
+            return {
+                'success': True,
+                'data': {
+                    'overall_metrics': overall_metrics,
+                    'bin_efficiency': efficiency_data
+                }
+            }
+            
+        except Exception as e:
+            return {
+                'success': False,
+                'message': f'Error analyzing efficiency: {str(e)}'
+            }
+    
+    @staticmethod
+    def get_daily_summary(date=None):
+        """
+        Get a comprehensive daily summary of waste logging activity.
+        
+        Args:
+            date (str, optional): Date in YYYY-MM-DD format (default: today)
+            
+        Returns:
+            dict: Response with daily summary statistics
+        """
+        try:
+            if date is None:
+                date = datetime.now().date()
+            else:
+                date = datetime.strptime(date, '%Y-%m-%d').date()
+            
+            db = Database()
+            cursor = db.connection.cursor(dictionary=True)
+            
+            # Get daily statistics
+            daily_stats_query = """
+                SELECT 
+                    COUNT(DISTINCT wl.log_id) as total_logs,
+                    COUNT(DISTINCT wl.bin_id) as bins_logged,
+                    AVG(wl.fill_level) as avg_fill_level,
+                    MAX(wl.fill_level) as max_fill_level,
+                    MIN(wl.fill_level) as min_fill_level,
+                    SUM(CASE WHEN wl.fill_level >= 80 THEN 1 ELSE 0 END) as critical_logs,
+                    SUM(CASE WHEN wl.fill_level >= 60 AND wl.fill_level < 80 THEN 1 ELSE 0 END) as warning_logs,
+                    SUM(CASE WHEN wl.fill_level < 60 THEN 1 ELSE 0 END) as normal_logs
+                FROM waste_logs wl
+                WHERE DATE(wl.timestamp) = %s
+            """
+            cursor.execute(daily_stats_query, (date,))
+            daily_stats = cursor.fetchone()
+            
+            # Get hourly distribution
+            hourly_query = """
+                SELECT 
+                    HOUR(timestamp) as hour,
+                    COUNT(*) as log_count,
+                    AVG(fill_level) as avg_fill
+                FROM waste_logs
+                WHERE DATE(timestamp) = %s
+                GROUP BY HOUR(timestamp)
+                ORDER BY hour
+            """
+            cursor.execute(hourly_query, (date,))
+            hourly_data = cursor.fetchall()
+            
+            # Get top zones for the day
+            zone_query = """
+                SELECT 
+                    b.zone,
+                    COUNT(wl.log_id) as log_count,
+                    AVG(wl.fill_level) as avg_fill
+                FROM waste_logs wl
+                JOIN bins b ON wl.bin_id = b.bin_id
+                WHERE DATE(wl.timestamp) = %s
+                GROUP BY b.zone
+                ORDER BY log_count DESC
+            """
+            cursor.execute(zone_query, (date,))
+            zone_data = cursor.fetchall()
+            
+            cursor.close()
+            db.close()
+            
+            return {
+                'success': True,
+                'data': {
+                    'date': str(date),
+                    'summary': daily_stats,
+                    'hourly_distribution': hourly_data,
+                    'zone_breakdown': zone_data
+                }
+            }
+            
+        except Exception as e:
+            return {
+                'success': False,
+                'message': f'Error retrieving daily summary: {str(e)}'
+            }

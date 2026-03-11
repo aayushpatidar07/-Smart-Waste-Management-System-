@@ -934,6 +934,65 @@ def api_export_waste_logs():
         return jsonify({'success': False, 'error': str(e)}), 500
 
 
+@app.route('/api/waste-logs/alerts', methods=['GET'])
+@login_required
+def api_get_waste_log_alerts():
+    """
+    Get bins exceeding fill level threshold for alert generation.
+    Query params:
+        - threshold (float): Fill level threshold percentage (default: 80)
+        - hours (int): Number of hours to look back (default: 24)
+    Returns: JSON with bins exceeding threshold
+    """
+    try:
+        threshold = float(request.args.get('threshold', 80))
+        hours = int(request.args.get('hours', 24))
+        
+        result = WasteLog.get_alerts_by_threshold(threshold, hours)
+        return jsonify(result)
+        
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+@app.route('/api/waste-logs/efficiency', methods=['GET'])
+@login_required
+def api_get_collection_efficiency():
+    """
+    Analyze collection efficiency metrics.
+    Query params:
+        - days (int): Number of days to analyze (default: 30)
+    Returns: JSON with efficiency analysis data
+    """
+    try:
+        days = int(request.args.get('days', 30))
+        
+        result = WasteLog.get_collection_efficiency(days)
+        return jsonify(result)
+        
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+@app.route('/api/waste-logs/daily-summary', methods=['GET'])
+@login_required
+def api_get_daily_summary():
+    """
+    Get comprehensive daily summary of waste logging activity.
+    Query params:
+        - date (str): Date in YYYY-MM-DD format (default: today)
+    Returns: JSON with daily summary statistics
+    """
+    try:
+        date = request.args.get('date')
+        
+        result = WasteLog.get_daily_summary(date)
+        return jsonify(result)
+        
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
 # =============================================
 # ERROR HANDLERS
 # =============================================
