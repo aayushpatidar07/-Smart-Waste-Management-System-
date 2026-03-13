@@ -240,6 +240,13 @@ def staff_collection():
     """Collection routes page"""
     return render_template('staff/collection.html')
 
+@app.route('/staff/waste-logs')
+@login_required
+@role_required(['staff', 'admin'])
+def staff_waste_logs():
+    """Staff waste log entry page"""
+    return render_template('staff/waste_logs.html')
+
 
 # =============================================
 # CITIZEN ROUTES

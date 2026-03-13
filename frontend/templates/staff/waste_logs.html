@@ -1,0 +1,359 @@
+{% extends "staff/dashboard.html" %}
+
+{% block title %}Waste Logs - Staff{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+
+    <!-- Page Header -->
+    <div class="row mb-4">
+        <div class="col">
+            <h2><i class="bi bi-journal-check"></i> Waste Log Entry</h2>
+            <p class="text-muted">Record bin fill levels during your collection rounds</p>
+        </div>
+    </div>
+
+    <!-- Quick Stats Row -->
+    <div class="row g-3 mb-4" id="statsRow">
+        <div class="col-md-3">
+            <div class="card border-0 bg-primary text-white">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h6 class="mb-0">Logs Today</h6>
+                            <h3 class="mb-0" id="statLogsToday">--</h3>
+                        </div>
+                        <i class="bi bi-calendar-check fs-1 opacity-50"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card border-0 bg-danger text-white">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h6 class="mb-0">Critical Bins</h6>
+                            <h3 class="mb-0" id="statCritical">--</h3>
+                        </div>
+                        <i class="bi bi-exclamation-triangle-fill fs-1 opacity-50"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card border-0 bg-warning text-dark">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h6 class="mb-0">Avg Fill Level</h6>
+                            <h3 class="mb-0" id="statAvgFill">--%</h3>
+                        </div>
+                        <i class="bi bi-bar-chart-fill fs-1 opacity-50"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card border-0 bg-success text-white">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h6 class="mb-0">Bins Logged</h6>
+                            <h3 class="mb-0" id="statBinsLogged">--</h3>
+                        </div>
+                        <i class="bi bi-trash2 fs-1 opacity-50"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row g-4">
+
+        <!-- Log Entry Form -->
+        <div class="col-md-5">
+            <div class="card shadow-sm">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0"><i class="bi bi-plus-circle"></i> New Waste Log</h5>
+                </div>
+                <div class="card-body">
+                    <form id="wasteLogForm">
+                        <!-- Bin Selection -->
+                        <div class="mb-3">
+                            <label class="form-label fw-bold">Select Bin <span class="text-danger">*</span></label>
+                            <select class="form-select" id="binSelect" required>
+                                <option value="">-- Choose a bin --</option>
+                            </select>
+                        </div>
+
+                        <!-- Bin Info Preview -->
+                        <div id="binPreview" class="alert alert-info d-none mb-3">
+                            <small>
+                                <strong>Location:</strong> <span id="previewLocation"></span><br>
+                                <strong>Zone:</strong> <span id="previewZone"></span><br>
+                                <strong>Last Fill:</strong> <span id="previewLastFill"></span>
+                            </small>
+                        </div>
+
+                        <!-- Fill Level -->
+                        <div class="mb-3">
+                            <label class="form-label fw-bold">Fill Level (%) <span class="text-danger">*</span></label>
+                            <input type="number" class="form-control" id="fillLevel"
+                                   min="0" max="100" step="0.1" required
+                                   placeholder="0 - 100">
+                            <div class="mt-2">
+                                <div class="progress" style="height: 20px;">
+                                    <div class="progress-bar" id="fillPreviewBar" style="width: 0%;">0%</div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Quick Fill Buttons -->
+                        <div class="mb-3">
+                            <label class="form-label fw-bold">Quick Select</label>
+                            <div class="btn-group w-100" role="group">
+                                <button type="button" class="btn btn-sm btn-outline-success" onclick="setFill(25)">25%</button>
+                                <button type="button" class="btn btn-sm btn-outline-info" onclick="setFill(50)">50%</button>
+                                <button type="button" class="btn btn-sm btn-outline-warning" onclick="setFill(75)">75%</button>
+                                <button type="button" class="btn btn-sm btn-outline-danger" onclick="setFill(100)">100%</button>
+                            </div>
+                        </div>
+
+                        <!-- Notes -->
+                        <div class="mb-3">
+                            <label class="form-label fw-bold">Notes</label>
+                            <textarea class="form-control" id="logNotes" rows="3"
+                                      placeholder="Any observations about this bin..."></textarea>
+                        </div>
+
+                        <!-- Submit -->
+                        <div class="d-grid gap-2">
+                            <button type="submit" class="btn btn-primary btn-lg">
+                                <i class="bi bi-save2"></i> Save Log Entry
+                            </button>
+                            <button type="reset" class="btn btn-outline-secondary" onclick="resetForm()">
+                                <i class="bi bi-x-circle"></i> Clear Form
+                            </button>
+                        </div>
+                    </form>
+
+                    <!-- Success Alert -->
+                    <div id="successAlert" class="alert alert-success mt-3 d-none">
+                        <i class="bi bi-check-circle"></i> Log saved successfully!
+                    </div>
+                    <div id="errorAlert" class="alert alert-danger mt-3 d-none"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Recent Logs Table -->
+        <div class="col-md-7">
+            <div class="card shadow-sm">
+                <div class="card-header bg-white d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0"><i class="bi bi-clock-history"></i> Recent Logs</h5>
+                    <button class="btn btn-sm btn-outline-primary" onclick="loadRecentLogs()">
+                        <i class="bi bi-arrow-clockwise"></i> Refresh
+                    </button>
+                </div>
+                <div class="card-body p-0">
+                    <div class="table-responsive" style="max-height: 520px; overflow-y: auto;">
+                        <table class="table table-hover mb-0">
+                            <thead class="table-light sticky-top">
+                                <tr>
+                                    <th>Bin</th>
+                                    <th>Location</th>
+                                    <th>Fill Level</th>
+                                    <th>Status</th>
+                                    <th>Time</th>
+                                </tr>
+                            </thead>
+                            <tbody id="recentLogsBody">
+                                <tr>
+                                    <td colspan="5" class="text-center py-4">
+                                        <div class="spinner-border spinner-border-sm text-primary"></div>
+                                        Loading...
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </div>
+</div>
+
+<!-- Modal -->
+<div class="modal fade" id="infoModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header bg-primary text-white">
+                <h5 class="modal-title" id="infoModalLabel">
+                    <i class="bi bi-info-circle"></i> Information
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body" id="infoModalBody"></div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+$(document).ready(function() {
+    loadBins();
+    loadRecentLogs();
+    loadTodayStats();
+
+    // Fill level live preview
+    $('#fillLevel').on('input', function() {
+        updateFillBar($(this).val());
+    });
+
+    // Bin select change
+    $('#binSelect').on('change', function() {
+        const selected = $(this).find(':selected');
+        const loc = selected.data('location');
+        const zone = selected.data('zone');
+        const fill = selected.data('fill');
+
+        if (loc) {
+            $('#previewLocation').text(loc);
+            $('#previewZone').text(zone || 'N/A');
+            $('#previewLastFill').text(fill !== undefined ? fill + '%' : 'N/A');
+            $('#binPreview').removeClass('d-none');
+        } else {
+            $('#binPreview').addClass('d-none');
+        }
+    });
+
+    // Form submit
+    $('#wasteLogForm').on('submit', function(e) {
+        e.preventDefault();
+        submitLog();
+    });
+});
+
+function loadBins() {
+    $.get('/api/bins', function(data) {
+        const select = $('#binSelect');
+        select.find('option:not(:first)').remove();
+
+        const bins = Array.isArray(data) ? data : (data.data || []);
+        bins.forEach(bin => {
+            select.append(`<option value="${bin.bin_id}"
+                data-location="${bin.location}"
+                data-zone="${bin.zone || ''}"
+                data-fill="${bin.waste_level || 0}">
+                ${bin.bin_code} - ${bin.location}
+            </option>`);
+        });
+    });
+}
+
+function updateFillBar(value) {
+    const val = parseFloat(value) || 0;
+    const color = val >= 80 ? 'bg-danger' : val >= 60 ? 'bg-warning' : 'bg-success';
+    const bar = $('#fillPreviewBar');
+    bar.css('width', val + '%').text(val + '%');
+    bar.attr('class', 'progress-bar ' + color);
+}
+
+function setFill(value) {
+    $('#fillLevel').val(value);
+    updateFillBar(value);
+}
+
+function resetForm() {
+    $('#binPreview').addClass('d-none');
+    updateFillBar(0);
+    $('#successAlert').addClass('d-none');
+    $('#errorAlert').addClass('d-none');
+}
+
+function submitLog() {
+    const binId = parseInt($('#binSelect').val());
+    const fillLevel = parseFloat($('#fillLevel').val());
+    const notes = $('#logNotes').val().trim();
+
+    $('#successAlert').addClass('d-none');
+    $('#errorAlert').addClass('d-none');
+
+    $.ajax({
+        url: '/api/waste-logs/create',
+        method: 'POST',
+        contentType: 'application/json',
+        data: JSON.stringify({ bin_id: binId, fill_level: fillLevel, notes: notes }),
+        success: function(response) {
+            if (response.success) {
+                $('#successAlert').removeClass('d-none');
+                $('#wasteLogForm')[0].reset();
+                resetForm();
+                loadRecentLogs();
+                loadTodayStats();
+            } else {
+                $('#errorAlert').text('❌ ' + response.message).removeClass('d-none');
+            }
+        },
+        error: function() {
+            $('#errorAlert').text('❌ Server error. Please try again.').removeClass('d-none');
+        }
+    });
+}
+
+function loadRecentLogs() {
+    $.get('/api/waste-logs?limit=20', function(response) {
+        const logs = response.data || response;
+        const tbody = $('#recentLogsBody');
+        tbody.empty();
+
+        if (!logs || logs.length === 0) {
+            tbody.append('<tr><td colspan="5" class="text-center text-muted py-4">No logs found</td></tr>');
+            return;
+        }
+
+        logs.forEach(log => {
+            const fill = parseFloat(log.fill_level);
+            const statusBadge = fill >= 80
+                ? '<span class="badge bg-danger">Critical</span>'
+                : fill >= 60
+                    ? '<span class="badge bg-warning text-dark">Warning</span>'
+                    : '<span class="badge bg-success">Normal</span>';
+
+            const barColor = fill >= 80 ? 'bg-danger' : fill >= 60 ? 'bg-warning' : 'bg-success';
+            const time = new Date(log.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+            const date = new Date(log.timestamp).toLocaleDateString();
+
+            tbody.append(`<tr>
+                <td><strong>${log.bin_code || 'BIN-' + log.bin_id}</strong></td>
+                <td class="small text-muted">${log.location || '--'}</td>
+                <td>
+                    <div class="d-flex align-items-center gap-2">
+                        <div class="progress flex-grow-1" style="height:12px;">
+                            <div class="progress-bar ${barColor}" style="width:${fill}%"></div>
+                        </div>
+                        <small>${fill}%</small>
+                    </div>
+                </td>
+                <td>${statusBadge}</td>
+                <td class="small text-muted">${date}<br>${time}</td>
+            </tr>`);
+        });
+    });
+}
+
+function loadTodayStats() {
+    $.get('/api/waste-logs/daily-summary', function(response) {
+        if (!response.success) return;
+        const s = response.data.summary;
+        $('#statLogsToday').text(s.total_logs || 0);
+        $('#statCritical').text(s.critical_logs || 0);
+        $('#statAvgFill').text((s.avg_fill_level ? parseFloat(s.avg_fill_level).toFixed(1) : 0) + '%');
+        $('#statBinsLogged').text(s.bins_logged || 0);
+    });
+}
+</script>
+{% endblock %}
