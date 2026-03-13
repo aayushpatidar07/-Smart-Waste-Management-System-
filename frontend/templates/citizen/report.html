@@ -3,65 +3,205 @@
 {% block title %}Report Issue - Citizen{% endblock %}
 
 {% block content %}
-<div class="container py-5">
-    <div class="row justify-content-center">
-        <div class="col-md-8">
-            <div class="card shadow">
+<div class="container py-4">
+
+    <!-- Page Header -->
+    <div class="row mb-4">
+        <div class="col">
+            <h2><i class="bi bi-flag-fill text-danger"></i> Report an Issue</h2>
+            <p class="text-muted">Help us keep the city clean by reporting waste management issues</p>
+        </div>
+    </div>
+
+    <div class="row g-4">
+
+        <!-- Report Form -->
+        <div class="col-md-7">
+            <div class="card shadow-sm">
                 <div class="card-header bg-danger text-white">
-                    <h4 class="mb-0"><i class="bi bi-flag-fill"></i> Report an Issue</h4>
+                    <h5 class="mb-0"><i class="bi bi-exclamation-triangle"></i> New Issue Report</h5>
                 </div>
                 <div class="card-body">
+
+                    <!-- Issue Type Cards -->
+                    <div class="mb-4">
+                        <label class="form-label fw-bold">Issue Type <span class="text-danger">*</span></label>
+                        <div class="row g-2" id="issueTypeCards">
+                            <div class="col-6 col-md-4">
+                                <div class="issue-card card text-center p-2 border-2 cursor-pointer"
+                                     data-value="overflow" onclick="selectIssueType(this)">
+                                    <i class="bi bi-trash-fill fs-2 text-danger"></i>
+                                    <small class="d-block mt-1">Bin Overflow</small>
+                                </div>
+                            </div>
+                            <div class="col-6 col-md-4">
+                                <div class="issue-card card text-center p-2 border-2 cursor-pointer"
+                                     data-value="damage" onclick="selectIssueType(this)">
+                                    <i class="bi bi-tools fs-2 text-warning"></i>
+                                    <small class="d-block mt-1">Bin Damage</small>
+                                </div>
+                            </div>
+                            <div class="col-6 col-md-4">
+                                <div class="issue-card card text-center p-2 border-2 cursor-pointer"
+                                     data-value="missing" onclick="selectIssueType(this)">
+                                    <i class="bi bi-question-circle-fill fs-2 text-secondary"></i>
+                                    <small class="d-block mt-1">Missing Bin</small>
+                                </div>
+                            </div>
+                            <div class="col-6 col-md-4">
+                                <div class="issue-card card text-center p-2 border-2 cursor-pointer"
+                                     data-value="smell" onclick="selectIssueType(this)">
+                                    <i class="bi bi-wind fs-2 text-info"></i>
+                                    <small class="d-block mt-1">Bad Smell</small>
+                                </div>
+                            </div>
+                            <div class="col-6 col-md-4">
+                                <div class="issue-card card text-center p-2 border-2 cursor-pointer"
+                                     data-value="illegal_dumping" onclick="selectIssueType(this)">
+                                    <i class="bi bi-exclamation-octagon-fill fs-2 text-danger"></i>
+                                    <small class="d-block mt-1">Illegal Dumping</small>
+                                </div>
+                            </div>
+                            <div class="col-6 col-md-4">
+                                <div class="issue-card card text-center p-2 border-2 cursor-pointer"
+                                     data-value="other" onclick="selectIssueType(this)">
+                                    <i class="bi bi-three-dots fs-2 text-muted"></i>
+                                    <small class="d-block mt-1">Other</small>
+                                </div>
+                            </div>
+                        </div>
+                        <input type="hidden" id="reportType" required>
+                        <div class="invalid-feedback" id="typeError">Please select an issue type.</div>
+                    </div>
+
                     <form id="reportForm">
+                        <!-- Bin Selection -->
                         <div class="mb-3">
-                            <label class="form-label">Issue Type *</label>
-                            <select class="form-select" name="report_type" required>
-                                <option value="">Select type...</option>
-                                <option value="overflow">Bin Overflow</option>
-                                <option value="damage">Bin Damage</option>
-                                <option value="missing">Missing Bin</option>
-                                <option value="smell">Bad Smell</option>
-                                <option value="other">Other</option>
-                            </select>
-                        </div>
-                        
-                        <div class="mb-3">
-                            <label class="form-label">Bin (Optional)</label>
+                            <label class="form-label fw-bold">Nearby Bin (Optional)</label>
                             <select class="form-select" name="bin_id" id="binSelect">
-                                <option value="">Select bin...</option>
+                                <option value="">-- Select nearest bin --</option>
                             </select>
                         </div>
-                        
+
+                        <!-- Location -->
                         <div class="mb-3">
-                            <label class="form-label">Location *</label>
-                            <input type="text" class="form-control" name="location" 
-                                   placeholder="e.g., Near Main Street Park" required>
+                            <label class="form-label fw-bold">Location <span class="text-danger">*</span></label>
+                            <div class="input-group">
+                                <input type="text" class="form-control" name="location" id="locationInput"
+                                       placeholder="e.g., Near Main Street Park" required>
+                                <button type="button" class="btn btn-outline-secondary" onclick="useCurrentLocation()"
+                                        title="Use my current location">
+                                    <i class="bi bi-geo-alt-fill"></i>
+                                </button>
+                            </div>
+                            <div class="form-text">Be as specific as possible to help our team locate the issue.</div>
                         </div>
-                        
+
+                        <!-- Description -->
                         <div class="mb-3">
-                            <label class="form-label">Description *</label>
-                            <textarea class="form-control" name="description" rows="4" 
-                                      placeholder="Describe the issue in detail..." required></textarea>
+                            <label class="form-label fw-bold">Description <span class="text-danger">*</span></label>
+                            <textarea class="form-control" name="description" id="description" rows="4"
+                                      placeholder="Describe the issue in detail..." required maxlength="1000"></textarea>
+                            <div class="d-flex justify-content-end">
+                                <small class="text-muted"><span id="charCount">0</span>/1000</small>
+                            </div>
                         </div>
-                        
-                        <div class="mb-3">
-                            <label class="form-label">Priority</label>
-                            <select class="form-select" name="priority">
-                                <option value="low">Low</option>
-                                <option value="medium" selected>Medium</option>
-                                <option value="high">High</option>
-                                <option value="critical">Critical</option>
-                            </select>
+
+                        <!-- Priority -->
+                        <div class="mb-4">
+                            <label class="form-label fw-bold">Priority Level</label>
+                            <div class="d-flex gap-2 flex-wrap">
+                                <div class="form-check form-check-inline">
+                                    <input class="form-check-input" type="radio" name="priority" id="pLow" value="low">
+                                    <label class="form-check-label text-success" for="pLow">
+                                        <i class="bi bi-circle-fill"></i> Low
+                                    </label>
+                                </div>
+                                <div class="form-check form-check-inline">
+                                    <input class="form-check-input" type="radio" name="priority" id="pMed" value="medium" checked>
+                                    <label class="form-check-label text-warning" for="pMed">
+                                        <i class="bi bi-circle-fill"></i> Medium
+                                    </label>
+                                </div>
+                                <div class="form-check form-check-inline">
+                                    <input class="form-check-input" type="radio" name="priority" id="pHigh" value="high">
+                                    <label class="form-check-label text-orange" for="pHigh">
+                                        <i class="bi bi-circle-fill"></i> High
+                                    </label>
+                                </div>
+                                <div class="form-check form-check-inline">
+                                    <input class="form-check-input" type="radio" name="priority" id="pCrit" value="critical">
+                                    <label class="form-check-label text-danger" for="pCrit">
+                                        <i class="bi bi-circle-fill"></i> Critical
+                                    </label>
+                                </div>
+                            </div>
                         </div>
-                        
+
+                        <!-- Submit -->
                         <div class="d-grid gap-2">
-                            <button type="submit" class="btn btn-danger btn-lg">
-                                <i class="bi bi-send"></i> Submit Report
+                            <button type="submit" class="btn btn-danger btn-lg" id="submitBtn">
+                                <i class="bi bi-send-fill"></i> Submit Report
                             </button>
-                            <a href="{{ url_for('citizen_dashboard') }}" class="btn btn-secondary">
-                                Cancel
+                            <a href="{{ url_for('citizen_dashboard') }}" class="btn btn-outline-secondary">
+                                <i class="bi bi-arrow-left"></i> Back to Dashboard
                             </a>
                         </div>
                     </form>
+                </div>
+            </div>
+        </div>
+
+        <!-- Sidebar: Tips + My Reports -->
+        <div class="col-md-5">
+
+            <!-- Reporting Tips -->
+            <div class="card shadow-sm mb-4 border-0 bg-light">
+                <div class="card-body">
+                    <h6 class="fw-bold mb-3"><i class="bi bi-lightbulb-fill text-warning"></i> Reporting Tips</h6>
+                    <ul class="list-unstyled mb-0 small">
+                        <li class="mb-2"><i class="bi bi-check2-circle text-success"></i> Choose the correct issue type</li>
+                        <li class="mb-2"><i class="bi bi-check2-circle text-success"></i> Provide exact location details</li>
+                        <li class="mb-2"><i class="bi bi-check2-circle text-success"></i> Select the nearest bin if known</li>
+                        <li class="mb-2"><i class="bi bi-check2-circle text-success"></i> Describe urgency in priority</li>
+                        <li class="mb-0"><i class="bi bi-check2-circle text-success"></i> Add details in description</li>
+                    </ul>
+                </div>
+            </div>
+
+            <!-- My Recent Reports -->
+            <div class="card shadow-sm">
+                <div class="card-header bg-white">
+                    <h6 class="mb-0"><i class="bi bi-clock-history"></i> My Recent Reports</h6>
+                </div>
+                <div class="list-group list-group-flush" id="myReportsList">
+                    <div class="list-group-item text-center text-muted py-3">
+                        <div class="spinner-border spinner-border-sm"></div> Loading...
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </div>
+</div>
+
+<!-- Success Modal -->
+<div class="modal fade" id="successModal" tabindex="-1" data-bs-backdrop="static">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0">
+            <div class="modal-body text-center py-5">
+                <div class="mb-3">
+                    <i class="bi bi-check-circle-fill text-success" style="font-size: 4rem;"></i>
+                </div>
+                <h4 class="fw-bold">Report Submitted!</h4>
+                <p class="text-muted">Thank you for helping keep our city clean.<br>Our team will review and act on your report.</p>
+                <div class="d-grid gap-2 mt-4">
+                    <a href="{{ url_for('citizen_dashboard') }}" class="btn btn-success btn-lg">
+                        <i class="bi bi-house"></i> Back to Dashboard
+                    </a>
+                    <button class="btn btn-outline-secondary" data-bs-dismiss="modal" onclick="resetForNew()">
+                        <i class="bi bi-plus-circle"></i> Submit Another Report
+                    </button>
                 </div>
             </div>
         </div>
@@ -71,43 +211,143 @@
 
 {% block extra_js %}
 <script>
+let selectedIssueType = '';
+
 $(document).ready(function() {
     loadBins();
-    
+    loadMyReports();
+
+    // Character counter
+    $('#description').on('input', function() {
+        $('#charCount').text($(this).val().length);
+    });
+
+    // Form submit
     $('#reportForm').on('submit', function(e) {
         e.preventDefault();
-        
-        const formData = {
-            report_type: $('[name="report_type"]').val(),
-            bin_id: $('[name="bin_id"]').val() || null,
-            location: $('[name="location"]').val(),
-            description: $('[name="description"]').val(),
-            priority: $('[name="priority"]').val()
-        };
-        
-        $.ajax({
-            url: '/api/reports/create',
-            method: 'POST',
-            contentType: 'application/json',
-            data: JSON.stringify(formData),
-            success: function(response) {
-                alert('Report submitted successfully!');
-                window.location.href = '{{ url_for("citizen_dashboard") }}';
-            },
-            error: function() {
-                alert('Error submitting report. Please try again.');
-            }
-        });
+        submitReport();
     });
 });
+
+function selectIssueType(card) {
+    $('.issue-card').removeClass('border-danger bg-danger text-white').addClass('border-2');
+    $(card).addClass('border-danger bg-danger text-white');
+    selectedIssueType = $(card).data('value');
+    $('#typeError').hide();
+}
+
+function useCurrentLocation() {
+    if (!navigator.geolocation) {
+        alert('Geolocation not supported by your browser.');
+        return;
+    }
+    navigator.geolocation.getCurrentPosition(function(pos) {
+        const lat = pos.coords.latitude.toFixed(5);
+        const lng = pos.coords.longitude.toFixed(5);
+        $('#locationInput').val(`Near coordinates: ${lat}, ${lng}`);
+    }, function() {
+        alert('Unable to retrieve your location.');
+    });
+}
 
 function loadBins() {
     $.get('/api/bins', function(data) {
         const select = $('#binSelect');
-        data.forEach(bin => {
-            select.append(`<option value="${bin.bin_id}">${bin.bin_code} - ${bin.location}</option>`);
+        const bins = Array.isArray(data) ? data : (data.data || []);
+        bins.forEach(bin => {
+            select.append(`<option value="${bin.bin_id}">${bin.bin_code} — ${bin.location}</option>`);
         });
     });
 }
+
+function submitReport() {
+    if (!selectedIssueType) {
+        $('#typeError').show();
+        $('html, body').animate({ scrollTop: 0 }, 400);
+        return;
+    }
+
+    const btn = $('#submitBtn');
+    btn.prop('disabled', true).html('<span class="spinner-border spinner-border-sm"></span> Submitting...');
+
+    const formData = {
+        report_type: selectedIssueType,
+        bin_id: $('#binSelect').val() || null,
+        location: $('#locationInput').val(),
+        description: $('#description').val(),
+        priority: $('[name="priority"]:checked').val()
+    };
+
+    $.ajax({
+        url: '/api/reports/create',
+        method: 'POST',
+        contentType: 'application/json',
+        data: JSON.stringify(formData),
+        success: function(response) {
+            $('#successModal').modal('show');
+            btn.prop('disabled', false).html('<i class="bi bi-send-fill"></i> Submit Report');
+        },
+        error: function() {
+            alert('❌ Error submitting report. Please try again.');
+            btn.prop('disabled', false).html('<i class="bi bi-send-fill"></i> Submit Report');
+        }
+    });
+}
+
+function loadMyReports() {
+    $.get('/api/reports?limit=5', function(data) {
+        const list = $('#myReportsList');
+        list.empty();
+
+        const reports = Array.isArray(data) ? data : (data.data || []);
+
+        if (!reports || reports.length === 0) {
+            list.append('<div class="list-group-item text-muted text-center py-3 small">No reports yet</div>');
+            return;
+        }
+
+        reports.slice(0, 5).forEach(r => {
+            const statusBadge = {
+                'pending':     '<span class="badge bg-warning text-dark">Pending</span>',
+                'in_progress': '<span class="badge bg-info">In Progress</span>',
+                'resolved':    '<span class="badge bg-success">Resolved</span>',
+                'closed':      '<span class="badge bg-secondary">Closed</span>'
+            }[r.status] || '<span class="badge bg-secondary">Unknown</span>';
+
+            const date = r.created_at ? new Date(r.created_at).toLocaleDateString() : '--';
+
+            list.append(`
+                <div class="list-group-item px-3 py-2">
+                    <div class="d-flex justify-content-between align-items-start">
+                        <div>
+                            <small class="fw-bold">${(r.report_type || 'Issue').replace('_', ' ').toUpperCase()}</small><br>
+                            <small class="text-muted">${r.location || '--'}</small>
+                        </div>
+                        <div class="text-end">
+                            ${statusBadge}<br>
+                            <small class="text-muted">${date}</small>
+                        </div>
+                    </div>
+                </div>
+            `);
+        });
+    }).fail(function() {
+        $('#myReportsList').html('<div class="list-group-item text-muted text-center small py-3">Could not load reports</div>');
+    });
+}
+
+function resetForNew() {
+    selectedIssueType = '';
+    $('.issue-card').removeClass('border-danger bg-danger text-white');
+    $('#reportForm')[0].reset();
+    $('#charCount').text('0');
+    loadMyReports();
+}
 </script>
+
+<style>
+.issue-card { cursor: pointer; transition: all 0.2s; }
+.issue-card:hover { border-color: #dc3545 !important; }
+.text-orange { color: #fd7e14 !important; }
+</style>
 {% endblock %}
