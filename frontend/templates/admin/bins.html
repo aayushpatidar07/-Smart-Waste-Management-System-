@@ -864,6 +864,8 @@ function viewAlerts() {
             content += '<thead class="table-danger">';
             content += '<tr><th>Bin Code</th><th>Location</th><th>Zone</th><th>Fill Level</th><th>Timestamp</th><th>Notes</th></tr>';
             content += '</thead><tbody>';
+
+            
             
             alerts.forEach(alert => {
                 const fillClass = alert.fill_level >= 90 ? 'text-danger fw-bold' : 'text-warning';
@@ -877,7 +879,7 @@ function viewAlerts() {
                 </tr>`;
             });
             
-            content += '</tbody></table></div>';
+            content += '</tbody></table></div>'; 
         }
         
         $('#binModalLabel').html('<i class="fas fa-bell"></i> Waste Log Alerts');
