@@ -1000,6 +1000,27 @@ def api_get_daily_summary():
         return jsonify({'success': False, 'error': str(e)}), 500
 
 
+@app.route('/api/waste-logs/trend-insights', methods=['GET'])
+@login_required
+def api_get_trend_insights():
+    """
+    Get trend insights across bins over a configurable period.
+    Query params:
+        - days (int): Number of days to analyze (default: 30)
+        - zone (str): Optional zone filter
+    Returns: JSON with trend summary and per-bin insight rows
+    """
+    try:
+        days = int(request.args.get('days', 30))
+        zone = request.args.get('zone')
+
+        result = WasteLog.get_trend_insights(days, zone)
+        return jsonify(result)
+
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
 # =============================================
 # ERROR HANDLERS
 # =============================================
