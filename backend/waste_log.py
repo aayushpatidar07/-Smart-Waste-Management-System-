@@ -1009,3 +1009,113 @@ class WasteLog:
                 'success': False,
                 'message': f'Error retrieving daily summary: {str(e)}'
             }
+
+    @staticmethod
+    def get_trend_insights(days=30, zone=None):
+        """
+        Get trend insights across bins over a configurable time window.
+
+        Args:
+            days (int): Number of days to analyze (default: 30)
+            zone (str, optional): Restrict analysis to a specific zone
+
+        Returns:
+            dict: Trend insights with rising/critical bins and summary metrics
+        """
+        try:
+            db = Database()
+            cursor = db.connection.cursor(dictionary=True)
+
+            time_threshold = datetime.now() - timedelta(days=days)
+
+            where_clause = "WHERE wl.timestamp >= %s"
+            params = [time_threshold]
+
+            if zone:
+                where_clause += " AND b.zone = %s"
+                params.append(zone)
+
+            # Compare last and first reading in the selected window for each bin.
+            trend_query = f"""
+                SELECT
+                    b.bin_id,
+                    b.bin_code,
+                    b.location,
+                    b.zone,
+                    COUNT(wl.log_id) AS reading_count,
+                    ROUND(MIN(wl.fill_level), 2) AS min_fill,
+                    ROUND(MAX(wl.fill_level), 2) AS max_fill,
+                    ROUND(AVG(wl.fill_level), 2) AS avg_fill,
+                    ROUND(
+                        SUBSTRING_INDEX(
+                            GROUP_CONCAT(wl.fill_level ORDER BY wl.timestamp ASC),
+                            ',',
+                            1
+                        ),
+                        2
+                    ) AS first_fill,
+                    ROUND(
+                        SUBSTRING_INDEX(
+                            GROUP_CONCAT(wl.fill_level ORDER BY wl.timestamp DESC),
+                            ',',
+                            1
+                        ),
+                        2
+                    ) AS last_fill,
+                    MAX(wl.timestamp) AS last_seen
+                FROM waste_logs wl
+                JOIN bins b ON wl.bin_id = b.bin_id
+                {where_clause}
+                GROUP BY b.bin_id, b.bin_code, b.location, b.zone
+                HAVING reading_count >= 2
+                ORDER BY last_fill DESC
+                LIMIT 100
+            """
+
+            cursor.execute(trend_query, tuple(params))
+            rows = cursor.fetchall()
+
+            enriched = []
+            for row in rows:
+                delta = round(float(row['last_fill']) - float(row['first_fill']), 2)
+                trend = 'rising' if delta > 0 else ('falling' if delta < 0 else 'stable')
+
+                row['delta_fill'] = delta
+                row['trend'] = trend
+                row['needs_attention'] = float(row['last_fill']) >= 80 or delta >= 15
+                enriched.append(row)
+
+            rising_bins = [r for r in enriched if r['trend'] == 'rising']
+            critical_bins = [r for r in enriched if float(r['last_fill']) >= 80]
+            rapid_risers = [r for r in enriched if r['delta_fill'] >= 15]
+
+            response = {
+                'period_days': days,
+                'zone': zone,
+                'total_bins_analyzed': len(enriched),
+                'rising_bins': len(rising_bins),
+                'critical_bins': len(critical_bins),
+                'rapid_risers': len(rapid_risers),
+                'top_attention_bins': sorted(
+                    [r for r in enriched if r['needs_attention']],
+                    key=lambda x: (float(x['last_fill']), x['delta_fill']),
+                    reverse=True
+                )[:10]
+            }
+
+            cursor.close()
+            db.close()
+
+            return {
+                'success': True,
+                'data': {
+                    'summary': response,
+                    'insights': enriched
+                }
+            }
+
+        except Exception as e:
+            return {
+                'success': False,
+                'message': f'Error retrieving trend insights: {str(e)}'
+            }

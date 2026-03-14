@@ -111,6 +111,28 @@ class BinSensorSimulator:
             print(f"  → Auto-waste-log created for bin {bin_id} [{fill_level}%]")
         return result
 
+    def has_recent_active_alert(self, bin_id, alert_type, severity, lookback_hours=6):
+        """
+        Check whether a similar active alert was already raised recently.
+        This prevents repetitive alert spam during frequent simulation updates.
+        """
+        query = """
+            SELECT alert_id
+            FROM alerts
+            WHERE bin_id = %s
+              AND alert_type = %s
+              AND severity = %s
+              AND status = 'active'
+              AND created_at >= DATE_SUB(NOW(), INTERVAL %s HOUR)
+            LIMIT 1
+        """
+        result = self.db.execute_query(
+            query,
+            (bin_id, alert_type, severity, lookback_hours),
+            fetch=True
+        )
+        return bool(result)
+
     def create_alert(self, bin_id, bin_code, alert_type, message, severity):
         """
         Create an alert record in the database.
@@ -121,6 +143,10 @@ class BinSensorSimulator:
             message (str): Alert message
             severity (str): info | warning | critical
         """
+        if self.has_recent_active_alert(bin_id, alert_type, severity):
+            print(f"  ↳ Skipping duplicate {severity} alert for {bin_code}")
+            return
+
         query = """
             INSERT INTO alerts (bin_id, alert_type, message, severity, status)
             VALUES (%s, %s, %s, %s, 'active')
