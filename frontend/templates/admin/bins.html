@@ -121,6 +121,9 @@
                         <button type="button" class="btn btn-outline-info" onclick="viewDailySummary()">
                             <i class="bi bi-calendar-day"></i> Daily
                         </button>
+                        <button type="button" class="btn btn-outline-dark" onclick="viewTrendInsights()">
+                            <i class="bi bi-graph-up-arrow"></i> Trends
+                        </button>
                     </div>
                 </div>
             </form>
@@ -1095,6 +1098,88 @@ function viewDailySummary() {
         
     }).fail(function() {
         alert('❌ Failed to retrieve daily summary.');
+    });
+}
+
+function viewTrendInsights() {
+    const days = prompt('Analyze trend insights for last N days (default: 30):', '30');
+    if (!days) return;
+
+    const zone = prompt('Optional: enter zone name (leave empty for all zones):', '') || '';
+    const zoneParam = zone.trim() ? `&zone=${encodeURIComponent(zone.trim())}` : '';
+
+    $.get(`/api/waste-logs/trend-insights?days=${days}${zoneParam}`, function(response) {
+        if (!response.success) {
+            alert('❌ Error loading trend insights: ' + (response.message || 'Unknown error'));
+            return;
+        }
+
+        const summary = response.data.summary;
+        const insights = response.data.insights || [];
+
+        let content = `
+            <div class="mb-3">
+                <h6 class="text-primary mb-2">
+                    <i class="bi bi-graph-up-arrow"></i> Trend Insights
+                </h6>
+                <div class="row g-2">
+                    <div class="col-md-3"><div class="alert alert-light py-2 mb-0"><strong>${summary.total_bins_analyzed}</strong><br><small>Bins Analyzed</small></div></div>
+                    <div class="col-md-3"><div class="alert alert-info py-2 mb-0"><strong>${summary.rising_bins}</strong><br><small>Rising Bins</small></div></div>
+                    <div class="col-md-3"><div class="alert alert-warning py-2 mb-0"><strong>${summary.rapid_risers}</strong><br><small>Rapid Risers</small></div></div>
+                    <div class="col-md-3"><div class="alert alert-danger py-2 mb-0"><strong>${summary.critical_bins}</strong><br><small>Critical Bins</small></div></div>
+                </div>
+                <small class="text-muted d-block mt-2">Period: ${summary.period_days} days ${summary.zone ? '| Zone: ' + summary.zone : '| All zones'}</small>
+            </div>
+        `;
+
+        if (insights.length === 0) {
+            content += '<div class="alert alert-secondary">No sufficient trend data found for this filter.</div>';
+        } else {
+            content += `
+                <div class="table-responsive" style="max-height: 420px; overflow-y: auto;">
+                    <table class="table table-sm table-striped table-hover">
+                        <thead class="table-dark sticky-top">
+                            <tr>
+                                <th>Bin</th>
+                                <th>Zone</th>
+                                <th>First %</th>
+                                <th>Last %</th>
+                                <th>Delta</th>
+                                <th>Trend</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+            `;
+
+            insights.forEach(item => {
+                const trendBadge = item.trend === 'rising'
+                    ? '<span class="badge bg-warning text-dark">Rising</span>'
+                    : (item.trend === 'falling'
+                        ? '<span class="badge bg-success">Falling</span>'
+                        : '<span class="badge bg-secondary">Stable</span>');
+
+                const deltaClass = item.delta_fill >= 15 ? 'text-danger fw-bold' : (item.delta_fill > 0 ? 'text-warning' : 'text-muted');
+
+                content += `
+                    <tr>
+                        <td><strong>${item.bin_code}</strong><br><small class="text-muted">${item.location}</small></td>
+                        <td><span class="badge bg-info">${item.zone}</span></td>
+                        <td>${item.first_fill}%</td>
+                        <td>${item.last_fill}%</td>
+                        <td class="${deltaClass}">${item.delta_fill > 0 ? '+' : ''}${item.delta_fill}%</td>
+                        <td>${trendBadge}</td>
+                    </tr>
+                `;
+            });
+
+            content += '</tbody></table></div>';
+        }
+
+        $('#modalTitle').text('Trend Insights');
+        $('#modalBody').html(content);
+        $('#binModal').modal('show');
+    }).fail(function() {
+        alert('❌ Failed to load trend insights.');
     });
 }
 </script>
