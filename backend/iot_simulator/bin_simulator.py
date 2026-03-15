@@ -40,6 +40,11 @@ class BinSensorSimulator:
         self.bin_model = Bin()
         self.db = Database()
         self._logged_bins = set()  # Track bins that got auto-logged this cycle
+        self.cycle_metrics = {
+            'alerts_created': 0,
+            'alerts_skipped': 0,
+            'auto_logs_created': 0
+        }
 
     def generate_sensor_reading(self, current_level, bin_type='general'):
         """
@@ -109,6 +114,7 @@ class BinSensorSimulator:
         result = WasteLog.create_waste_log(bin_id, fill_level, notes)
         if result.get('success'):
             print(f"  → Auto-waste-log created for bin {bin_id} [{fill_level}%]")
+            self.cycle_metrics['auto_logs_created'] += 1
         return result
 
     def has_recent_active_alert(self, bin_id, alert_type, severity, lookback_hours=6):
@@ -145,6 +151,7 @@ class BinSensorSimulator:
         """
         if self.has_recent_active_alert(bin_id, alert_type, severity):
             print(f"  ↳ Skipping duplicate {severity} alert for {bin_code}")
+            self.cycle_metrics['alerts_skipped'] += 1
             return
 
         query = """
@@ -153,6 +160,7 @@ class BinSensorSimulator:
         """
         self.db.execute_query(query, (bin_id, alert_type, message, severity), fetch=False)
         print(f"  ⚠ Alert [{severity.upper()}] for {bin_code}: {message}")
+        self.cycle_metrics['alerts_created'] += 1
 
     def update_bin_sensor(self, bin_id):
         """
@@ -223,6 +231,11 @@ class BinSensorSimulator:
         print("=" * 70)
 
         self._logged_bins.clear()  # Reset auto-log tracker each cycle
+        self.cycle_metrics = {
+            'alerts_created': 0,
+            'alerts_skipped': 0,
+            'auto_logs_created': 0
+        }
 
         # Get all active bins
         bins = self.bin_model.get_all_bins()
@@ -234,7 +247,14 @@ class BinSensorSimulator:
                 updated += 1
 
         print("=" * 70)
-        print(f"Sensor update completed! {updated} bins updated.\n")
+        print(f"Sensor update completed! {updated} bins updated.")
+        print(
+            "Cycle metrics: "
+            f"alerts_created={self.cycle_metrics['alerts_created']}, "
+            f"alerts_skipped={self.cycle_metrics['alerts_skipped']}, "
+            f"auto_logs_created={self.cycle_metrics['auto_logs_created']}"
+        )
+        print()
 
     def simulate_collection(self, bin_id, vehicle_id=None):
         """

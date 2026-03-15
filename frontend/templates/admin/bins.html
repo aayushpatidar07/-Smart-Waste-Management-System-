@@ -115,6 +115,9 @@
                         <button type="button" class="btn btn-outline-danger" onclick="viewAlerts()">
                             <i class="bi bi-bell-fill"></i> Alerts
                         </button>
+                        <button type="button" class="btn btn-outline-danger" onclick="viewHighRiskBins()">
+                            <i class="bi bi-exclamation-diamond-fill"></i> High Risk
+                        </button>
                         <button type="button" class="btn btn-outline-primary" onclick="viewEfficiency()">
                             <i class="bi bi-speedometer2"></i> Efficiency
                         </button>
@@ -1180,6 +1183,84 @@ function viewTrendInsights() {
         $('#binModal').modal('show');
     }).fail(function() {
         alert('❌ Failed to load trend insights.');
+    });
+}
+
+function viewHighRiskBins() {
+    const hours = prompt('Check high-risk bins over last N hours (default: 24):', '24');
+    if (!hours) return;
+
+    const minFill = prompt('Minimum fill level to include (default: 70):', '70');
+    if (!minFill) return;
+
+    $.get(`/api/waste-logs/high-risk?hours=${hours}&min_fill=${minFill}`, function(response) {
+        if (!response.success) {
+            alert('❌ Error loading high-risk bins: ' + (response.message || 'Unknown error'));
+            return;
+        }
+
+        const summary = response.data.summary;
+        const bins = response.data.bins || [];
+
+        let content = `
+            <div class="mb-3">
+                <h6 class="text-danger"><i class="bi bi-exclamation-diamond-fill"></i> High-Risk Bins</h6>
+                <div class="row g-2">
+                    <div class="col-md-3"><div class="alert alert-light py-2 mb-0"><strong>${summary.count}</strong><br><small>Total</small></div></div>
+                    <div class="col-md-3"><div class="alert alert-danger py-2 mb-0"><strong>${summary.critical_count}</strong><br><small>Critical</small></div></div>
+                    <div class="col-md-3"><div class="alert alert-warning py-2 mb-0"><strong>${summary.high_count}</strong><br><small>High</small></div></div>
+                    <div class="col-md-3"><div class="alert alert-info py-2 mb-0"><strong>${summary.min_fill}%</strong><br><small>Min Fill</small></div></div>
+                </div>
+                <small class="text-muted d-block mt-2">Window: last ${summary.hours} hours</small>
+            </div>
+        `;
+
+        if (bins.length === 0) {
+            content += '<div class="alert alert-success">No high-risk bins found for this filter.</div>';
+        } else {
+            content += `
+                <div class="table-responsive" style="max-height: 420px; overflow-y: auto;">
+                    <table class="table table-sm table-striped table-hover">
+                        <thead class="table-dark sticky-top">
+                            <tr>
+                                <th>Bin</th>
+                                <th>Zone</th>
+                                <th>Fill %</th>
+                                <th>Hours Since Log</th>
+                                <th>Risk Score</th>
+                                <th>Risk Level</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+            `;
+
+            bins.forEach(item => {
+                const riskBadge = item.risk_level === 'critical'
+                    ? '<span class="badge bg-danger">Critical</span>'
+                    : (item.risk_level === 'high'
+                        ? '<span class="badge bg-warning text-dark">High</span>'
+                        : '<span class="badge bg-info">Moderate</span>');
+
+                content += `
+                    <tr>
+                        <td><strong>${item.bin_code}</strong><br><small class="text-muted">${item.location}</small></td>
+                        <td><span class="badge bg-secondary">${item.zone}</span></td>
+                        <td>${item.fill_level}%</td>
+                        <td>${item.hours_since_log}</td>
+                        <td class="fw-bold">${item.risk_score}</td>
+                        <td>${riskBadge}</td>
+                    </tr>
+                `;
+            });
+
+            content += '</tbody></table></div>';
+        }
+
+        $('#modalTitle').text('High-Risk Bins');
+        $('#modalBody').html(content);
+        $('#binModal').modal('show');
+    }).fail(function() {
+        alert('❌ Failed to load high-risk bins.');
     });
 }
 </script>

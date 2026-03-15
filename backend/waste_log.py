@@ -1119,3 +1119,83 @@ class WasteLog:
                 'success': False,
                 'message': f'Error retrieving trend insights: {str(e)}'
             }
+
+    @staticmethod
+    def get_high_risk_bins(hours=24, min_fill=70):
+        """
+        Get high-risk bins based on latest fill level and stale timestamps.
+
+        Args:
+            hours (int): Lookback window for recent logs
+            min_fill (float): Minimum fill level to include
+
+        Returns:
+            dict: High-risk bin list with risk scores
+        """
+        try:
+            db = Database()
+            cursor = db.connection.cursor(dictionary=True)
+
+            lookback = datetime.now() - timedelta(hours=hours)
+
+            query = """
+                SELECT
+                    b.bin_id,
+                    b.bin_code,
+                    b.location,
+                    b.zone,
+                    wl.fill_level,
+                    wl.timestamp,
+                    TIMESTAMPDIFF(HOUR, wl.timestamp, NOW()) AS hours_since_log
+                FROM waste_logs wl
+                JOIN bins b ON wl.bin_id = b.bin_id
+                WHERE wl.timestamp >= %s
+                  AND wl.log_id IN (
+                      SELECT MAX(log_id)
+                      FROM waste_logs
+                      WHERE timestamp >= %s
+                      GROUP BY bin_id
+                  )
+                  AND wl.fill_level >= %s
+                ORDER BY wl.fill_level DESC, wl.timestamp ASC
+                LIMIT 100
+            """
+            cursor.execute(query, (lookback, lookback, min_fill))
+            rows = cursor.fetchall()
+
+            for row in rows:
+                fill = float(row['fill_level'])
+                stale_bonus = 10 if row['hours_since_log'] >= 12 else 0
+                row['risk_score'] = round(fill + stale_bonus, 2)
+                row['risk_level'] = (
+                    'critical' if fill >= 85 else
+                    'high' if fill >= 75 else
+                    'moderate'
+                )
+
+            rows = sorted(rows, key=lambda r: r['risk_score'], reverse=True)
+
+            summary = {
+                'hours': hours,
+                'min_fill': min_fill,
+                'count': len(rows),
+                'critical_count': len([r for r in rows if r['risk_level'] == 'critical']),
+                'high_count': len([r for r in rows if r['risk_level'] == 'high'])
+            }
+
+            cursor.close()
+            db.close()
+
+            return {
+                'success': True,
+                'data': {
+                    'summary': summary,
+                    'bins': rows
+                }
+            }
+
+        except Exception as e:
+            return {
+                'success': False,
+                'message': f'Error retrieving high-risk bins: {str(e)}'
+            }
