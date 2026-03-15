@@ -1021,6 +1021,27 @@ def api_get_trend_insights():
         return jsonify({'success': False, 'error': str(e)}), 500
 
 
+@app.route('/api/waste-logs/high-risk', methods=['GET'])
+@login_required
+def api_get_high_risk_bins():
+    """
+    Get high-risk bins based on latest fill level readings.
+    Query params:
+        - hours (int): Lookback window in hours (default: 24)
+        - min_fill (float): Minimum fill percentage (default: 70)
+    Returns: JSON with risk-ranked bin list
+    """
+    try:
+        hours = int(request.args.get('hours', 24))
+        min_fill = float(request.args.get('min_fill', 70))
+
+        result = WasteLog.get_high_risk_bins(hours, min_fill)
+        return jsonify(result)
+
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
 # =============================================
 # ERROR HANDLERS
 # =============================================
