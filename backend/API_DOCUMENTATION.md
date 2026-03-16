@@ -122,6 +122,24 @@ Get comprehensive daily summary of waste logging activity
 - **Query Params**: `date` (YYYY-MM-DD, optional, default: today)
 - **Response**: `{ "success": true, "data": { "date": "string", "summary": {}, "hourly_distribution": [], "zone_breakdown": [] } }`
 
+#### GET /api/waste-logs/trend-insights
+Get trend insights across bins over a configurable period
+- **Auth**: Required
+- **Query Params**: `days` (default: 30), `zone` (optional)
+- **Response**: `{ "success": true, "data": { "summary": {}, "insights": [] } }`
+
+#### GET /api/waste-logs/high-risk
+Get risk-ranked bins based on latest fill level readings
+- **Auth**: Required
+- **Query Params**: `hours` (default: 24), `min_fill` (default: 70)
+- **Response**: `{ "success": true, "data": { "summary": {}, "bins": [] } }`
+
+#### GET /api/waste-logs/zone-risk-heatmap
+Get zone-level risk heatmap data for operations planning
+- **Auth**: Required
+- **Query Params**: `days` (default: 7)
+- **Response**: `{ "success": true, "data": { "summary": {}, "zones": [] } }`
+
 ### Reports
 
 #### GET /api/reports
