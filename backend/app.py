@@ -1042,6 +1042,24 @@ def api_get_high_risk_bins():
         return jsonify({'success': False, 'error': str(e)}), 500
 
 
+@app.route('/api/waste-logs/zone-risk-heatmap', methods=['GET'])
+@login_required
+def api_get_zone_risk_heatmap():
+    """
+    Get zone-level risk heatmap data for waste operations.
+    Query params:
+        - days (int): Number of days to analyze (default: 7)
+    Returns: JSON with zone risk summary and zone rows
+    """
+    try:
+        days = int(request.args.get('days', 7))
+        result = WasteLog.get_zone_risk_heatmap(days)
+        return jsonify(result)
+
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
 # =============================================
 # ERROR HANDLERS
 # =============================================
