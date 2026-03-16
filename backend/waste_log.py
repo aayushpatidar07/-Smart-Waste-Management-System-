@@ -1199,3 +1199,78 @@ class WasteLog:
                 'success': False,
                 'message': f'Error retrieving high-risk bins: {str(e)}'
             }
+
+    @staticmethod
+    def get_zone_risk_heatmap(days=7):
+        """
+        Get zone-level risk heatmap data for operations planning.
+
+        Args:
+            days (int): Number of days to analyze (default: 7)
+
+        Returns:
+            dict: Zone-level risk metrics and overall summary
+        """
+        try:
+            db = Database()
+            cursor = db.connection.cursor(dictionary=True)
+
+            since = datetime.now() - timedelta(days=days)
+
+            query = """
+                SELECT
+                    b.zone,
+                    COUNT(DISTINCT b.bin_id) AS bins_in_zone,
+                    COUNT(wl.log_id) AS total_logs,
+                    ROUND(AVG(wl.fill_level), 2) AS avg_fill_level,
+                    ROUND(MAX(wl.fill_level), 2) AS peak_fill_level,
+                    SUM(CASE WHEN wl.fill_level >= 85 THEN 1 ELSE 0 END) AS critical_events,
+                    SUM(CASE WHEN wl.fill_level >= 70 AND wl.fill_level < 85 THEN 1 ELSE 0 END) AS high_events,
+                    MAX(wl.timestamp) AS latest_log
+                FROM waste_logs wl
+                JOIN bins b ON wl.bin_id = b.bin_id
+                WHERE wl.timestamp >= %s
+                GROUP BY b.zone
+                ORDER BY avg_fill_level DESC, critical_events DESC
+            """
+            cursor.execute(query, (since,))
+            zones = cursor.fetchall()
+
+            for zone in zones:
+                avg_fill = float(zone['avg_fill_level'] or 0)
+                critical_events = int(zone['critical_events'] or 0)
+                zone['risk_score'] = round(avg_fill + (critical_events * 2), 2)
+                zone['risk_level'] = (
+                    'critical' if avg_fill >= 80 or critical_events >= 5 else
+                    'high' if avg_fill >= 70 or critical_events >= 2 else
+                    'moderate' if avg_fill >= 55 else
+                    'low'
+                )
+
+            summary = {
+                'days': days,
+                'zones_analyzed': len(zones),
+                'critical_zones': len([z for z in zones if z['risk_level'] == 'critical']),
+                'high_zones': len([z for z in zones if z['risk_level'] == 'high']),
+                'overall_avg_fill': round(
+                    sum(float(z['avg_fill_level'] or 0) for z in zones) / len(zones),
+                    2
+                ) if zones else 0
+            }
+
+            cursor.close()
+            db.close()
+
+            return {
+                'success': True,
+                'data': {
+                    'summary': summary,
+                    'zones': zones
+                }
+            }
+
+        except Exception as e:
+            return {
+                'success': False,
+                'message': f'Error retrieving zone risk heatmap: {str(e)}'
+            }

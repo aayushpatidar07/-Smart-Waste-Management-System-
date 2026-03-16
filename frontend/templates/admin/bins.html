@@ -127,6 +127,9 @@
                         <button type="button" class="btn btn-outline-dark" onclick="viewTrendInsights()">
                             <i class="bi bi-graph-up-arrow"></i> Trends
                         </button>
+                        <button type="button" class="btn btn-outline-secondary" onclick="viewZoneRiskHeatmap()">
+                            <i class="bi bi-grid-3x3-gap-fill"></i> Heatmap
+                        </button>
                     </div>
                 </div>
             </form>
@@ -1261,6 +1264,85 @@ function viewHighRiskBins() {
         $('#binModal').modal('show');
     }).fail(function() {
         alert('❌ Failed to load high-risk bins.');
+    });
+}
+
+function viewZoneRiskHeatmap() {
+    const days = prompt('Heatmap period in days (default: 7):', '7');
+    if (!days) return;
+
+    $.get(`/api/waste-logs/zone-risk-heatmap?days=${days}`, function(response) {
+        if (!response.success) {
+            alert('❌ Error loading zone heatmap: ' + (response.message || 'Unknown error'));
+            return;
+        }
+
+        const summary = response.data.summary;
+        const zones = response.data.zones || [];
+
+        let content = `
+            <div class="mb-3">
+                <h6 class="text-secondary"><i class="bi bi-grid-3x3-gap-fill"></i> Zone Risk Heatmap</h6>
+                <div class="row g-2">
+                    <div class="col-md-3"><div class="alert alert-light py-2 mb-0"><strong>${summary.zones_analyzed}</strong><br><small>Zones</small></div></div>
+                    <div class="col-md-3"><div class="alert alert-danger py-2 mb-0"><strong>${summary.critical_zones}</strong><br><small>Critical</small></div></div>
+                    <div class="col-md-3"><div class="alert alert-warning py-2 mb-0"><strong>${summary.high_zones}</strong><br><small>High</small></div></div>
+                    <div class="col-md-3"><div class="alert alert-info py-2 mb-0"><strong>${summary.overall_avg_fill}%</strong><br><small>Overall Avg Fill</small></div></div>
+                </div>
+                <small class="text-muted d-block mt-2">Period: last ${summary.days} days</small>
+            </div>
+        `;
+
+        if (zones.length === 0) {
+            content += '<div class="alert alert-secondary">No zone heatmap data found.</div>';
+        } else {
+            content += `
+                <div class="table-responsive" style="max-height: 420px; overflow-y: auto;">
+                    <table class="table table-sm table-striped table-hover">
+                        <thead class="table-dark sticky-top">
+                            <tr>
+                                <th>Zone</th>
+                                <th>Bins</th>
+                                <th>Total Logs</th>
+                                <th>Avg Fill</th>
+                                <th>Critical Events</th>
+                                <th>Risk Score</th>
+                                <th>Risk Level</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+            `;
+
+            zones.forEach(z => {
+                const riskBadge = z.risk_level === 'critical'
+                    ? '<span class="badge bg-danger">Critical</span>'
+                    : (z.risk_level === 'high'
+                        ? '<span class="badge bg-warning text-dark">High</span>'
+                        : (z.risk_level === 'moderate'
+                            ? '<span class="badge bg-info">Moderate</span>'
+                            : '<span class="badge bg-success">Low</span>'));
+
+                content += `
+                    <tr>
+                        <td><strong>${z.zone || 'Unassigned'}</strong></td>
+                        <td>${z.bins_in_zone}</td>
+                        <td>${z.total_logs}</td>
+                        <td>${z.avg_fill_level}%</td>
+                        <td>${z.critical_events}</td>
+                        <td class="fw-bold">${z.risk_score}</td>
+                        <td>${riskBadge}</td>
+                    </tr>
+                `;
+            });
+
+            content += '</tbody></table></div>';
+        }
+
+        $('#modalTitle').text('Zone Risk Heatmap');
+        $('#modalBody').html(content);
+        $('#binModal').modal('show');
+    }).fail(function() {
+        alert('❌ Failed to load zone heatmap data.');
     });
 }
 </script>
