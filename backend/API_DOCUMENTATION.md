@@ -140,6 +140,12 @@ Get zone-level risk heatmap data for operations planning
 - **Query Params**: `days` (default: 7)
 - **Response**: `{ "success": true, "data": { "summary": {}, "zones": [] } }`
 
+#### GET /api/waste-logs/overflow-forecast
+Forecast bins likely to exceed critical fill threshold
+- **Auth**: Required
+- **Query Params**: `hours_ahead` (default: 24), `baseline_days` (default: 7)
+- **Response**: `{ "success": true, "data": { "summary": {}, "forecast": [] } }`
+
 ### Reports
 
 #### GET /api/reports
