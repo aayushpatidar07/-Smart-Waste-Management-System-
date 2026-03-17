@@ -130,6 +130,9 @@
                         <button type="button" class="btn btn-outline-secondary" onclick="viewZoneRiskHeatmap()">
                             <i class="bi bi-grid-3x3-gap-fill"></i> Heatmap
                         </button>
+                        <button type="button" class="btn btn-outline-warning" onclick="viewOverflowForecast()">
+                            <i class="bi bi-lightning-charge-fill"></i> Forecast
+                        </button>
                     </div>
                 </div>
             </form>
@@ -1343,6 +1346,89 @@ function viewZoneRiskHeatmap() {
         $('#binModal').modal('show');
     }).fail(function() {
         alert('❌ Failed to load zone heatmap data.');
+    });
+}
+
+function viewOverflowForecast() {
+    const hoursAhead = prompt('Forecast horizon in hours (default: 24):', '24');
+    if (!hoursAhead) return;
+
+    const baselineDays = prompt('Baseline trend window in days (default: 7):', '7');
+    if (!baselineDays) return;
+
+    $.get(`/api/waste-logs/overflow-forecast?hours_ahead=${hoursAhead}&baseline_days=${baselineDays}`, function(response) {
+        if (!response.success) {
+            alert('❌ Error loading overflow forecast: ' + (response.message || 'Unknown error'));
+            return;
+        }
+
+        const summary = response.data.summary;
+        const forecast = response.data.forecast || [];
+
+        let content = `
+            <div class="mb-3">
+                <h6 class="text-warning"><i class="bi bi-lightning-charge-fill"></i> Overflow Forecast</h6>
+                <div class="row g-2">
+                    <div class="col-md-4"><div class="alert alert-light py-2 mb-0"><strong>${summary.bins_analyzed}</strong><br><small>Bins Analyzed</small></div></div>
+                    <div class="col-md-4"><div class="alert alert-danger py-2 mb-0"><strong>${summary.likely_critical_bins}</strong><br><small>Likely Critical</small></div></div>
+                    <div class="col-md-4"><div class="alert alert-info py-2 mb-0"><strong>${summary.hours_ahead}h</strong><br><small>Forecast Horizon</small></div></div>
+                </div>
+                <small class="text-muted d-block mt-2">Baseline window: ${summary.baseline_days} days</small>
+            </div>
+        `;
+
+        if (forecast.length === 0) {
+            content += '<div class="alert alert-secondary">No forecast data available.</div>';
+        } else {
+            content += `
+                <div class="table-responsive" style="max-height: 430px; overflow-y: auto;">
+                    <table class="table table-sm table-striped table-hover">
+                        <thead class="table-dark sticky-top">
+                            <tr>
+                                <th>Bin</th>
+                                <th>Zone</th>
+                                <th>Current %</th>
+                                <th>Projected %</th>
+                                <th>Hourly Rate</th>
+                                <th>ETA to 80%</th>
+                                <th>Risk</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+            `;
+
+            forecast.forEach(item => {
+                const riskBadge = item.forecast_risk === 'critical'
+                    ? '<span class="badge bg-danger">Critical</span>'
+                    : (item.forecast_risk === 'high'
+                        ? '<span class="badge bg-warning text-dark">High</span>'
+                        : (item.forecast_risk === 'moderate'
+                            ? '<span class="badge bg-info">Moderate</span>'
+                            : '<span class="badge bg-success">Low</span>'));
+
+                const eta = item.hours_to_critical === null ? '-' : `${item.hours_to_critical}h`;
+
+                content += `
+                    <tr>
+                        <td><strong>${item.bin_code}</strong><br><small class="text-muted">${item.location}</small></td>
+                        <td><span class="badge bg-secondary">${item.zone}</span></td>
+                        <td>${item.current_fill}%</td>
+                        <td class="fw-bold">${item.projected_fill}%</td>
+                        <td>${item.hourly_fill_rate}%/h</td>
+                        <td>${eta}</td>
+                        <td>${riskBadge}</td>
+                    </tr>
+                `;
+            });
+
+            content += '</tbody></table></div>';
+        }
+
+        $('#modalTitle').text('Overflow Forecast');
+        $('#modalBody').html(content);
+        $('#binModal').modal('show');
+    }).fail(function() {
+        alert('❌ Failed to load overflow forecast.');
     });
 }
 </script>
