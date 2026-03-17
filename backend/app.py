@@ -1060,6 +1060,27 @@ def api_get_zone_risk_heatmap():
         return jsonify({'success': False, 'error': str(e)}), 500
 
 
+@app.route('/api/waste-logs/overflow-forecast', methods=['GET'])
+@login_required
+def api_get_overflow_forecast():
+    """
+    Forecast bins likely to exceed critical fill threshold.
+    Query params:
+        - hours_ahead (int): Forecast horizon in hours (default: 24)
+        - baseline_days (int): Historical window in days (default: 7)
+    Returns: JSON with forecast summary and projected bins
+    """
+    try:
+        hours_ahead = int(request.args.get('hours_ahead', 24))
+        baseline_days = int(request.args.get('baseline_days', 7))
+
+        result = WasteLog.get_overflow_forecast(hours_ahead, baseline_days)
+        return jsonify(result)
+
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
 # =============================================
 # ERROR HANDLERS
 # =============================================

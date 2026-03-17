@@ -1274,3 +1274,105 @@ class WasteLog:
                 'success': False,
                 'message': f'Error retrieving zone risk heatmap: {str(e)}'
             }
+
+    @staticmethod
+    def get_overflow_forecast(hours_ahead=24, baseline_days=7):
+        """
+        Forecast bins likely to exceed critical threshold in upcoming hours.
+
+        Args:
+            hours_ahead (int): Forecast horizon in hours
+            baseline_days (int): Historical window for fill-rate estimation
+
+        Returns:
+            dict: Forecast summary and per-bin projections
+        """
+        try:
+            db = Database()
+            cursor = db.connection.cursor(dictionary=True)
+
+            since = datetime.now() - timedelta(days=baseline_days)
+
+            query = """
+                SELECT
+                    b.bin_id,
+                    b.bin_code,
+                    b.location,
+                    b.zone,
+                    ROUND(
+                        SUBSTRING_INDEX(
+                            GROUP_CONCAT(wl.fill_level ORDER BY wl.timestamp DESC),
+                            ',',
+                            1
+                        ),
+                        2
+                    ) AS current_fill,
+                    ROUND(
+                        (
+                            MAX(wl.fill_level) - MIN(wl.fill_level)
+                        ) / GREATEST(TIMESTAMPDIFF(HOUR, MIN(wl.timestamp), MAX(wl.timestamp)), 1),
+                        4
+                    ) AS hourly_fill_rate,
+                    MAX(wl.timestamp) AS latest_log,
+                    COUNT(wl.log_id) AS reading_count
+                FROM waste_logs wl
+                JOIN bins b ON wl.bin_id = b.bin_id
+                WHERE wl.timestamp >= %s
+                GROUP BY b.bin_id, b.bin_code, b.location, b.zone
+                HAVING reading_count >= 2
+                ORDER BY current_fill DESC
+                LIMIT 150
+            """
+            cursor.execute(query, (since,))
+            rows = cursor.fetchall()
+
+            forecasted = []
+            for row in rows:
+                current_fill = float(row['current_fill'] or 0)
+                hourly_rate = max(float(row['hourly_fill_rate'] or 0), 0)
+                projected_fill = min(100.0, round(current_fill + (hourly_rate * hours_ahead), 2))
+                hours_to_critical = None
+
+                if current_fill < 80 and hourly_rate > 0:
+                    hours_to_critical = round((80 - current_fill) / hourly_rate, 2)
+
+                row['projected_fill'] = projected_fill
+                row['hours_to_critical'] = hours_to_critical
+                row['will_cross_critical'] = projected_fill >= 80
+                row['forecast_risk'] = (
+                    'critical' if projected_fill >= 90 else
+                    'high' if projected_fill >= 80 else
+                    'moderate' if projected_fill >= 65 else
+                    'low'
+                )
+                forecasted.append(row)
+
+            likely_overflow = [r for r in forecasted if r['will_cross_critical']]
+            summary = {
+                'hours_ahead': hours_ahead,
+                'baseline_days': baseline_days,
+                'bins_analyzed': len(forecasted),
+                'likely_critical_bins': len(likely_overflow),
+                'top_risk_bins': sorted(
+                    forecasted,
+                    key=lambda x: (x['projected_fill'], x['hourly_fill_rate']),
+                    reverse=True
+                )[:10]
+            }
+
+            cursor.close()
+            db.close()
+
+            return {
+                'success': True,
+                'data': {
+                    'summary': summary,
+                    'forecast': forecasted
+                }
+            }
+
+        except Exception as e:
+            return {
+                'success': False,
+                'message': f'Error retrieving overflow forecast: {str(e)}'
+            }
