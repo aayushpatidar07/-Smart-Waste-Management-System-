@@ -146,6 +146,12 @@ Forecast bins likely to exceed critical fill threshold
 - **Query Params**: `hours_ahead` (default: 24), `baseline_days` (default: 7)
 - **Response**: `{ "success": true, "data": { "summary": {}, "forecast": [] } }`
 
+#### GET /api/waste-logs/collection-readiness
+Get dispatch-ready bins based on recent high fill readings
+- **Auth**: Required
+- **Query Params**: `hours` (default: 12), `threshold` (default: 75)
+- **Response**: `{ "success": true, "data": { "summary": {}, "bins": [] } }`
+
 ### Reports
 
 #### GET /api/reports
