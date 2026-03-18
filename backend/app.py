@@ -1081,6 +1081,27 @@ def api_get_overflow_forecast():
         return jsonify({'success': False, 'error': str(e)}), 500
 
 
+@app.route('/api/waste-logs/collection-readiness', methods=['GET'])
+@login_required
+def api_get_collection_readiness():
+    """
+    Get dispatch-ready bins based on recent high fill readings.
+    Query params:
+        - hours (int): Lookback window in hours (default: 12)
+        - threshold (float): Fill threshold percentage (default: 75)
+    Returns: JSON with readiness summary and ranked bins
+    """
+    try:
+        hours = int(request.args.get('hours', 12))
+        threshold = float(request.args.get('threshold', 75))
+
+        result = WasteLog.get_collection_readiness(hours, threshold)
+        return jsonify(result)
+
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
 # =============================================
 # ERROR HANDLERS
 # =============================================

@@ -1376,3 +1376,84 @@ class WasteLog:
                 'success': False,
                 'message': f'Error retrieving overflow forecast: {str(e)}'
             }
+
+    @staticmethod
+    def get_collection_readiness(hours=12, threshold=75):
+        """
+        Get collection readiness list for dispatch planning.
+
+        Args:
+            hours (int): Lookback window for latest readings
+            threshold (float): Fill level threshold for readiness shortlist
+
+        Returns:
+            dict: Readiness summary and prioritized bins
+        """
+        try:
+            db = Database()
+            cursor = db.connection.cursor(dictionary=True)
+
+            since = datetime.now() - timedelta(hours=hours)
+
+            query = """
+                SELECT
+                    b.bin_id,
+                    b.bin_code,
+                    b.location,
+                    b.zone,
+                    wl.fill_level,
+                    wl.timestamp,
+                    TIMESTAMPDIFF(HOUR, wl.timestamp, NOW()) AS staleness_hours
+                FROM waste_logs wl
+                JOIN bins b ON wl.bin_id = b.bin_id
+                WHERE wl.timestamp >= %s
+                  AND wl.log_id IN (
+                      SELECT MAX(log_id)
+                      FROM waste_logs
+                      WHERE timestamp >= %s
+                      GROUP BY bin_id
+                  )
+                  AND wl.fill_level >= %s
+                ORDER BY wl.fill_level DESC, wl.timestamp ASC
+                LIMIT 150
+            """
+
+            cursor.execute(query, (since, since, threshold))
+            rows = cursor.fetchall()
+
+            for row in rows:
+                fill = float(row['fill_level'] or 0)
+                stale = int(row['staleness_hours'] or 0)
+                row['readiness_score'] = round(fill + min(stale, 12) * 1.5, 2)
+                row['dispatch_priority'] = (
+                    'immediate' if fill >= 90 else
+                    'urgent' if fill >= 80 else
+                    'scheduled'
+                )
+
+            prioritized = sorted(rows, key=lambda r: r['readiness_score'], reverse=True)
+
+            summary = {
+                'hours': hours,
+                'threshold': threshold,
+                'ready_bins': len(prioritized),
+                'immediate': len([r for r in prioritized if r['dispatch_priority'] == 'immediate']),
+                'urgent': len([r for r in prioritized if r['dispatch_priority'] == 'urgent'])
+            }
+
+            cursor.close()
+            db.close()
+
+            return {
+                'success': True,
+                'data': {
+                    'summary': summary,
+                    'bins': prioritized
+                }
+            }
+
+        except Exception as e:
+            return {
+                'success': False,
+                'message': f'Error retrieving collection readiness: {str(e)}'
+            }
