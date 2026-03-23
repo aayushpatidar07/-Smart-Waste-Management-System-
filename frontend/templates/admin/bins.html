@@ -110,6 +110,9 @@
                         <button type="button" class="btn btn-outline-success" onclick="exportLogs()">
                             <i class="bi bi-download"></i> Export
                         </button>
+                        <button type="button" class="btn btn-outline-secondary" onclick="submitBasicWasteLog()">
+                            <i class="bi bi-journal-plus"></i> Basic Log
+                        </button>
                     </div>
                     <div class="btn-group" role="group">
                         <button type="button" class="btn btn-outline-danger" onclick="viewAlerts()">
@@ -1510,6 +1513,41 @@ function viewCollectionReadiness() {
         $('#binModal').modal('show');
     }).fail(function() {
         alert('❌ Failed to load collection readiness.');
+    });
+}
+
+function submitBasicWasteLog() {
+    const binId = prompt('Enter Bin ID (integer):');
+    if (!binId) return;
+
+    const fillLevel = prompt('Enter Fill Level (0-100):');
+    if (!fillLevel) return;
+
+    const payload = {
+        bin_id: parseInt(binId, 10),
+        fill_level: parseFloat(fillLevel),
+        timestamp: new Date().toISOString()
+    };
+
+    $.ajax({
+        url: '/api/waste-logs/basic-create',
+        method: 'POST',
+        contentType: 'application/json',
+        data: JSON.stringify(payload),
+        success: function(response) {
+            if (response.success) {
+                alert(`✅ Basic waste report logged. Log ID: ${response.log_id}`);
+                loadBins();
+            } else {
+                alert('❌ ' + (response.message || 'Failed to log waste report'));
+            }
+        },
+        error: function(xhr) {
+            const msg = xhr.responseJSON && (xhr.responseJSON.message || xhr.responseJSON.error)
+                ? (xhr.responseJSON.message || xhr.responseJSON.error)
+                : 'Request failed';
+            alert('❌ ' + msg);
+        }
     });
 }
 </script>
