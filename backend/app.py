@@ -28,6 +28,7 @@ from models import (
     Alert, Analytics, Schedule
 )
 from waste_log import WasteLog
+from waste_log_basic import BasicWasteLogService
 
 # Load environment variables
 load_dotenv()
@@ -713,6 +714,37 @@ def api_create_waste_log():
         else:
             return jsonify(result), 400
             
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+@app.route('/api/waste-logs/basic-create', methods=['POST'])
+@login_required
+def api_basic_create_waste_log():
+    """Create a basic waste report log with minimal required fields."""
+    try:
+        data = request.get_json() or {}
+
+        if 'bin_id' not in data or 'fill_level' not in data:
+            return jsonify({
+                'success': False,
+                'message': 'bin_id and fill_level are required'
+            }), 400
+
+        result = BasicWasteLogService.log_waste_collection(
+            int(data.get('bin_id')),
+            float(data.get('fill_level')),
+            data.get('timestamp')
+        )
+
+        status_code = 200 if result.get('success') else 400
+        return jsonify(result), status_code
+
+    except (TypeError, ValueError):
+        return jsonify({
+            'success': False,
+            'message': 'Invalid input types for bin_id or fill_level'
+        }), 400
     except Exception as e:
         return jsonify({'success': False, 'error': str(e)}), 500
 
