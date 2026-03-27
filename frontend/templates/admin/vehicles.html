@@ -74,6 +74,9 @@ function loadVehicles() {
                                 <span class="badge bg-${statusClass} p-2">
                                     ${vehicle.status.toUpperCase()}
                                 </span>
+                                <button class="btn btn-sm btn-info" onclick="showMaintenanceForm(${vehicle.id})">
+                                    <i class="bi bi-tools"></i> Log Maintenance
+                                </button>
                             </div>
                         </div>
                     </div>
@@ -81,6 +84,46 @@ function loadVehicles() {
             `;
             grid.append(card);
         });
+    });
+}
+
+function showMaintenanceForm(vehicleId) {
+    const type = prompt('Enter maintenance type (e.g., oil_change, tire_rotation, inspection):');
+    if (!type) return;
+    
+    const description = prompt('Enter maintenance description (at least 5 characters):');
+    if (!description || description.length < 5) {
+        alert('Description must be at least 5 characters');
+        return;
+    }
+    
+    const costStr = prompt('Enter maintenance cost (optional, default 0):');
+    const cost = costStr ? parseFloat(costStr) : 0;
+    
+    if (isNaN(cost) || cost < 0) {
+        alert('Cost must be a valid positive number');
+        return;
+    }
+    
+    $.ajax({
+        url: `/api/vehicles/${vehicleId}/maintenance`,
+        type: 'POST',
+        contentType: 'application/json',
+        data: JSON.stringify({
+            maintenance_type: type,
+            description: description,
+            cost: cost
+        }),
+        success: function(result) {
+            if (result.success) {
+                alert(`Maintenance logged successfully!\nMaintenance ID: ${result.maintenance_id}`);
+            } else {
+                alert(`Error: ${result.message}`);
+            }
+        },
+        error: function() {
+            alert('Failed to log maintenance');
+        }
     });
 }
 </script>

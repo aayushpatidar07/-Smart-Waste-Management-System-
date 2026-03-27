@@ -29,6 +29,7 @@ from models import (
 )
 from waste_log import WasteLog
 from waste_log_basic import BasicWasteLogService
+from vehicle_maintenance import VehicleMaintenanceService
 
 # Load environment variables
 load_dotenv()
@@ -1130,6 +1131,56 @@ def api_get_collection_readiness():
         result = WasteLog.get_collection_readiness(hours, threshold)
         return jsonify(result)
 
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+# =============================================
+# VEHICLE MAINTENANCE ENDPOINTS
+# =============================================
+
+@app.route('/api/vehicles/<int:vehicle_id>/maintenance', methods=['POST'])
+@login_required
+def api_log_vehicle_maintenance(vehicle_id):
+    """Log vehicle maintenance record."""
+    try:
+        data = request.get_json() or {}
+        
+        if 'maintenance_type' not in data or 'description' not in data:
+            return jsonify({
+                'success': False,
+                'message': 'maintenance_type and description are required'
+            }), 400
+        
+        result = VehicleMaintenanceService.log_maintenance(
+            vehicle_id,
+            data.get('maintenance_type'),
+            data.get('description'),
+            float(data.get('cost', 0))
+        )
+        
+        status_code = 200 if result.get('success') else 400
+        return jsonify(result), status_code
+        
+    except (TypeError, ValueError):
+        return jsonify({
+            'success': False,
+            'message': 'Invalid input types'
+        }), 400
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+@app.route('/api/vehicles/<int:vehicle_id>/maintenance/next-schedule', methods=['GET'])
+@login_required
+def api_get_vehicle_next_maintenance(vehicle_id):
+    """Get recommended next maintenance schedule for a vehicle."""
+    try:
+        result = VehicleMaintenanceService.get_next_maintenance(vehicle_id)
+        
+        status_code = 200 if result.get('success') else 404
+        return jsonify(result), status_code
+        
     except Exception as e:
         return jsonify({'success': False, 'error': str(e)}), 500
 
