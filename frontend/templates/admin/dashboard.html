@@ -196,8 +196,11 @@
         
         <div class="col-md-6">
             <div class="card">
-                <div class="card-header bg-white">
+                <div class="card-header bg-white d-flex justify-content-between align-items-center">
                     <h5 class="mb-0"><i class="bi bi-bell text-warning"></i> Recent Alerts</h5>
+                    <button class="btn btn-sm btn-warning" onclick="showCreateAlertForm()">
+                        <i class="bi bi-plus-circle"></i> New Alert
+                    </button>
                 </div>
                 <div class="card-body">
                     <div class="list-group" id="alertsList">
@@ -341,38 +344,109 @@ function loadFullBins() {
 }
 
 function loadAlerts() {
-    $.get('/api/alerts', function(data) {
+    $.get('/api/alerts/active', function(data) {
         const container = $('#alertsList');
         container.empty();
         
-        if (data.length === 0) {
+        if (!data.alerts || data.alerts.length === 0) {
             container.append('<div class="text-center text-muted py-3">No active alerts</div>');
             return;
         }
         
-        data.slice(0, 5).forEach(alert => {
-            const severityClass = {
+        data.alerts.slice(0, 5).forEach(alert => {
+            const priorityClass = {
                 'critical': 'danger',
-                'warning': 'warning',
-                'info': 'info'
-            }[alert.severity] || 'secondary';
+                'high': 'danger',
+                'medium': 'warning',
+                'low': 'info'
+            }[alert.priority] || 'secondary';
             
             const item = `
                 <div class="list-group-item">
                     <div class="d-flex w-100 justify-content-between">
                         <h6 class="mb-1">
-                            <span class="badge bg-${severityClass}">${alert.severity.toUpperCase()}</span>
-                            ${alert.bin_code || 'System'}
+                            <span class="badge bg-${priorityClass}">${alert.priority.toUpperCase()}</span>
+                            Bin #${alert.bin_id}
                         </h6>
                         <small class="text-muted">${formatDate(alert.created_at)}</small>
                     </div>
-                    <p class="mb-1 small">${alert.message}</p>
+                    <p class="mb-1 small">${alert.alert_type}: ${alert.message}</p>
+                    <button class="btn btn-xs btn-link text-danger p-0" onclick="resolveAlert(${alert.id})">
+                        <small>Mark Resolved</small>
+                    </button>
                 </div>
             `;
             container.append(item);
         });
     });
 }
+
+function showCreateAlertForm() {
+    const binId = prompt('Enter Bin ID:');
+    if (!binId || isNaN(binId)) return;
+    
+    const alertType = prompt('Enter Alert Type (overflow, delayed_collection, maintenance_required, sensor_failure, low_battery):');
+    if (!alertType) return;
+    
+    const priority = prompt('Enter Priority Level (low, medium, high, critical):');
+    if (!priority) return;
+    
+    const message = prompt('Enter Alert Message (at least 5 characters):');
+    if (!message || message.length < 5) {
+        alert('Message must be at least 5 characters');
+        return;
+    }
+    
+    $.ajax({
+        url: '/api/alerts',
+        type: 'POST',
+        contentType: 'application/json',
+        data: JSON.stringify({
+            bin_id: parseInt(binId),
+            alert_type: alertType,
+            priority: priority,
+            message: message
+        }),
+        success: function(result) {
+            if (result.success) {
+                alert(`Alert created successfully!\nAlert ID: ${result.alert_id}`);
+                loadAlerts();
+                loadDashboardStats();
+            } else {
+                alert(`Error: ${result.message}`);
+            }
+        },
+        error: function() {
+            alert('Failed to create alert');
+        }
+    });
+}
+
+function resolveAlert(alertId) {
+    const notes = prompt('Enter resolution notes (optional):');
+    
+    $.ajax({
+        url: `/api/alerts/${alertId}/resolve`,
+        type: 'POST',
+        contentType: 'application/json',
+        data: JSON.stringify({
+            resolution_notes: notes || ''
+        }),
+        success: function(result) {
+            if (result.success) {
+                alert('Alert resolved successfully');
+                loadAlerts();
+                loadDashboardStats();
+            } else {
+                alert(`Error: ${result.message}`);
+            }
+        },
+        error: function() {
+            alert('Failed to resolve alert');
+        }
+    });
+}
+
 
 function formatDate(dateStr) {
     const date = new Date(dateStr);

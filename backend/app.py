@@ -30,6 +30,7 @@ from models import (
 from waste_log import WasteLog
 from waste_log_basic import BasicWasteLogService
 from vehicle_maintenance import VehicleMaintenanceService
+from collection_alerts import CollectionAlertsService
 
 # Load environment variables
 load_dotenv()
@@ -1181,6 +1182,87 @@ def api_get_vehicle_next_maintenance(vehicle_id):
         status_code = 200 if result.get('success') else 404
         return jsonify(result), status_code
         
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+# =============================================
+# COLLECTION ALERTS ENDPOINTS
+# =============================================
+
+@app.route('/api/alerts', methods=['POST'])
+@login_required
+@role_required(['admin', 'staff'])
+def api_create_collection_alert():
+    """Create a new collection alert."""
+    try:
+        data = request.get_json() or {}
+        
+        required_fields = ['bin_id', 'alert_type', 'priority', 'message']
+        if not all(field in data for field in required_fields):
+            return jsonify({
+                'success': False,
+                'message': 'bin_id, alert_type, priority, and message are required'
+            }), 400
+        
+        result = CollectionAlertsService.create_alert(
+            int(data.get('bin_id')),
+            data.get('alert_type'),
+            data.get('priority'),
+            data.get('message')
+        )
+        
+        status_code = 201 if result.get('success') else 400
+        return jsonify(result), status_code
+        
+    except (TypeError, ValueError):
+        return jsonify({
+            'success': False,
+            'message': 'Invalid input types'
+        }), 400
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+@app.route('/api/alerts/active', methods=['GET'])
+@login_required
+def api_get_active_alerts():
+    """Get all active (unresolved) collection alerts."""
+    try:
+        priority = request.args.get('priority')
+        result = CollectionAlertsService.get_active_alerts(priority)
+        return jsonify(result), 200
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+@app.route('/api/alerts/<int:alert_id>/resolve', methods=['POST'])
+@login_required
+@role_required(['admin', 'staff'])
+def api_resolve_alert(alert_id):
+    """Mark an alert as resolved."""
+    try:
+        data = request.get_json() or {}
+        notes = data.get('resolution_notes', '')
+        
+        result = CollectionAlertsService.resolve_alert(alert_id, notes)
+        
+        status_code = 200 if result.get('success') else 404
+        return jsonify(result), status_code
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+@app.route('/api/alerts/bin/<int:bin_id>', methods=['GET'])
+@login_required
+def api_get_bin_alerts(bin_id):
+    """Get alerts for a specific bin."""
+    try:
+        include_resolved = request.args.get('include_resolved', 'false').lower() == 'true'
+        result = CollectionAlertsService.get_alerts_by_bin(bin_id, include_resolved)
+        
+        status_code = 200 if result.get('success') else 404
+        return jsonify(result), status_code
     except Exception as e:
         return jsonify({'success': False, 'error': str(e)}), 500
 
