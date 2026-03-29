@@ -119,6 +119,9 @@ function loadRoutes() {
                         <button class="btn btn-sm btn-info" onclick="viewRoute(${route.route_id})">
                             <i class="bi bi-eye"></i>
                         </button>
+                        <button class="btn btn-sm btn-warning" onclick="analyzeRouteOptimization(${route.route_id})">
+                            <i class="bi bi-graph-up"></i>
+                        </button>
                     </td>
                 </tr>
             `;
@@ -200,6 +203,34 @@ function generateAIRoute() {
 
 function viewRoute(routeId) {
     window.location.href = `/admin/routes/${routeId}`;
+}
+
+function analyzeRouteOptimization(routeId) {
+    $.ajax({
+        url: `/api/routes/${routeId}/optimization-analysis`,
+        type: 'GET',
+        success: function(result) {
+            if (result.success) {
+                let analysisText = `
+Efficiency Score: ${result.efficiency_score}/100
+Total Distance: ${result.total_distance_km} km
+Bins in Route: ${result.bins_count}
+High Fill Bins: ${result.high_fill_bins}
+Average Fill Level: ${result.average_fill_level}%
+Status: ${result.status}
+
+Recommendations:
+${result.recommendations.length > 0 ? result.recommendations.map((r, i) => `${i + 1}. ${r}`).join('\n') : 'No recommendations at this time'}
+                `;
+                alert(analysisText);
+            } else {
+                alert(`Error: ${result.message}`);
+            }
+        },
+        error: function() {
+            alert('Failed to analyze route optimization');
+        }
+    });
 }
 </script>
 {% endblock %}
