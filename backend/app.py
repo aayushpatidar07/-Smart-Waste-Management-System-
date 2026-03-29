@@ -31,6 +31,7 @@ from waste_log import WasteLog
 from waste_log_basic import BasicWasteLogService
 from vehicle_maintenance import VehicleMaintenanceService
 from collection_alerts import CollectionAlertsService
+from route_optimization_insights import RouteOptimizationService
 
 # Load environment variables
 load_dotenv()
@@ -1263,6 +1264,38 @@ def api_get_bin_alerts(bin_id):
         
         status_code = 200 if result.get('success') else 404
         return jsonify(result), status_code
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+# =============================================
+# ROUTE OPTIMIZATION ENDPOINTS
+# =============================================
+
+@app.route('/api/routes/<int:route_id>/optimization-analysis', methods=['GET'])
+@login_required
+def api_analyze_route_efficiency(route_id):
+    """Analyze efficiency metrics and get optimization recommendations for a route."""
+    try:
+        result = RouteOptimizationService.analyze_route_efficiency(route_id)
+        
+        status_code = 200 if result.get('success') else 404
+        return jsonify(result), status_code
+        
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+@app.route('/api/zones/<string:zone>/optimization-suggestions', methods=['GET'])
+@login_required
+def api_get_zone_optimization_suggestions(zone):
+    """Get optimization suggestions for all routes in a specific zone."""
+    try:
+        result = RouteOptimizationService.get_optimization_suggestions(zone)
+        
+        status_code = 200 if result.get('success') else 404
+        return jsonify(result), status_code
+        
     except Exception as e:
         return jsonify({'success': False, 'error': str(e)}), 500
 
