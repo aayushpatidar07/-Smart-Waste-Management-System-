@@ -30,6 +30,7 @@ from models import (
 from waste_log import WasteLog
 from waste_log_basic import BasicWasteLogService
 from vehicle_maintenance import VehicleMaintenanceService
+from bin_sensor_analytics import BinSensorAnalytics
 from collection_alerts import CollectionAlertsService
 from route_optimization_insights import RouteOptimizationService
 
@@ -1292,6 +1293,75 @@ def api_get_zone_optimization_suggestions(zone):
     """Get optimization suggestions for all routes in a specific zone."""
     try:
         result = RouteOptimizationService.get_optimization_suggestions(zone)
+        
+        status_code = 200 if result.get('success') else 404
+        return jsonify(result), status_code
+        
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+# =============================================
+# BIN SENSOR ANALYTICS ENDPOINTS
+# =============================================
+
+@app.route('/api/bins/<int:bin_id>/sensors/log', methods=['POST'])
+@login_required
+def api_log_sensor_reading(bin_id):
+    """Log sensor reading from a waste bin."""
+    try:
+        data = request.get_json() or {}
+        
+        if 'fill_level' not in data:
+            return jsonify({
+                'success': False,
+                'message': 'fill_level is required'
+            }), 400
+        
+        result = BinSensorAnalytics.log_sensor_reading(
+            bin_id,
+            float(data.get('fill_level')),
+            data.get('temperature'),
+            data.get('humidity'),
+            data.get('odor_level')
+        )
+        
+        status_code = 200 if result.get('success') else 400
+        return jsonify(result), status_code
+        
+    except (TypeError, ValueError):
+        return jsonify({
+            'success': False,
+            'message': 'Invalid input types'
+        }), 400
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+@app.route('/api/bins/<int:bin_id>/sensors/trends', methods=['GET'])
+@login_required
+def api_get_sensor_trends(bin_id):
+    """Get sensor reading trends for a bin."""
+    try:
+        hours = int(request.args.get('hours', 24))
+        
+        result = BinSensorAnalytics.get_sensor_trends(bin_id, hours)
+        
+        status_code = 200 if result.get('success') else 404
+        return jsonify(result), status_code
+        
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+@app.route('/api/bins/<int:bin_id>/sensors/anomalies', methods=['GET'])
+@login_required
+def api_detect_sensor_anomalies(bin_id):
+    """Detect anomalies in sensor readings for a bin."""
+    try:
+        hours = int(request.args.get('hours', 24))
+        
+        result = BinSensorAnalytics.detect_sensor_anomalies(bin_id, hours)
         
         status_code = 200 if result.get('success') else 404
         return jsonify(result), status_code

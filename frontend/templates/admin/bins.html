@@ -139,6 +139,9 @@
                         <button type="button" class="btn btn-outline-success" onclick="viewCollectionReadiness()">
                             <i class="bi bi-truck"></i> Readiness
                         </button>
+                        <button type="button" class="btn btn-outline-info" onclick="viewSensorAnalytics()">
+                            <i class="bi bi-cpu"></i> Sensors
+                        </button>
                     </div>
                 </div>
             </form>
@@ -1513,6 +1516,144 @@ function viewCollectionReadiness() {
         $('#binModal').modal('show');
     }).fail(function() {
         alert('❌ Failed to load collection readiness.');
+    });
+}
+
+function viewSensorAnalytics() {
+    const binIdStr = prompt('Enter bin ID to analyze sensors:', '');
+    if (!binIdStr) return;
+    
+    const binId = parseInt(binIdStr);
+    if (isNaN(binId) || binId <= 0) {
+        alert('Invalid bin ID');
+        return;
+    }
+    
+    const hours = prompt('Hours to analyze (default: 24):', '24');
+    if (!hours) return;
+    
+    // Get trends
+    $.get(`/api/bins/${binId}/sensors/trends?hours=${hours}`, function(trendResponse) {
+        if (!trendResponse.success) {
+            alert('❌ Error loading sensor trends: ' + (trendResponse.message || 'Unknown error'));
+            return;
+        }
+        
+        // Get anomalies
+        $.get(`/api/bins/${binId}/sensors/anomalies?hours=${hours}`, function(anomalyResponse) {
+            if (!anomalyResponse.success) {
+                alert('❌ Error loading anomalies');
+                return;
+            }
+            
+            const trends = trendResponse;
+            const anomalies = anomalyResponse;
+            
+            let content = `
+                <div class="mb-3">
+                    <h6 class="text-info"><i class="bi bi-cpu"></i> Bin Sensor Analytics</h6>
+                    <small class="text-muted d-block">Bin #${trends.bin_id} | Analysis period: ${trends.hours_analyzed} hours | Readings: ${trends.reading_count}</small>
+                </div>
+                
+                <div class="alert alert-${anomalies.status === 'critical' ? 'danger' : (anomalies.status === 'warning' ? 'warning' : 'success')} mb-3">
+                    <strong>Status:</strong> ${anomalies.status.toUpperCase()} (${anomalies.anomaly_count} anomalies detected)
+                </div>
+            `;
+            
+            // Fill Level Section
+            if (trends.fill_level && Object.keys(trends.fill_level).length > 0) {
+                const fd = trends.fill_level;
+                content += `
+                    <div class="card mb-3">
+                        <div class="card-header bg-light">
+                            <h6 class="mb-0">Fill Level</h6>
+                        </div>
+                        <div class="card-body">
+                            <div class="row text-center">
+                                <div class="col-md-3">
+                                    <div class="h2 text-primary">${fd.current}%</div>
+                                    <small>Current</small>
+                                </div>
+                                <div class="col-md-3">
+                                    <div class="h5">${fd.average}%</div>
+                                    <small>Average</small>
+                                </div>
+                                <div class="col-md-3">
+                                    <div class="h5">${fd.min}% → ${fd.max}%</div>
+                                    <small>Range</small>
+                                </div>
+                                <div class="col-md-3">
+                                    <div class="badge bg-info p-2">${fd.trend}</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }
+            
+            // Temperature Section
+            if (trends.temperature && Object.keys(trends.temperature).length > 0) {
+                const td = trends.temperature;
+                content += `
+                    <div class="card mb-3">
+                        <div class="card-header bg-light">
+                            <h6 class="mb-0">Temperature</h6>
+                        </div>
+                        <div class="card-body">
+                            <div class="row text-center">
+                                <div class="col-md-4">
+                                    <div class="h3">${td.current}°C</div>
+                                    <small>Current</small>
+                                </div>
+                                <div class="col-md-4">
+                                    <div class="h5">${td.average}°C</div>
+                                    <small>Average</small>
+                                </div>
+                                <div class="col-md-4">
+                                    <div class="h5">${td.min}° → ${td.max}°</div>
+                                    <small>Range</small>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }
+            
+            // Anomalies Section
+            if (anomalies.anomalies && anomalies.anomalies.length > 0) {
+                content += `
+                    <div class="card">
+                        <div class="card-header bg-light">
+                            <h6 class="mb-0">Detected Anomalies</h6>
+                        </div>
+                        <div class="card-body">
+                            <ul class="list-group">
+                `;
+                anomalies.anomalies.forEach(anom => {
+                    const badgeClass = anom.severity === 'critical' ? 'danger' : (anom.severity === 'warning' ? 'warning' : 'info');
+                    content += `
+                        <li class="list-group-item">
+                            <span class="badge bg-${badgeClass}">${anom.type}</span> ${anom.message}
+                        </li>
+                    `;
+                });
+                content += `
+                            </ul>
+                        </div>
+                    </div>
+                `;
+            } else {
+                content += '<div class="alert alert-success"><i class="bi bi-check-circle"></i> No anomalies detected</div>';
+            }
+            
+            $('#modalTitle').text('Bin Sensor Analytics');
+            $('#modalBody').html(content);
+            $('#binModal').modal('show');
+        }).fail(function() {
+            alert('❌ Failed to load anomalies.');
+        });
+    }).fail(function() {
+        alert('❌ Failed to load sensor trends.');
     });
 }
 
