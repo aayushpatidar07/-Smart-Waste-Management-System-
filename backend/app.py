@@ -33,6 +33,7 @@ from vehicle_maintenance import VehicleMaintenanceService
 from bin_sensor_analytics import BinSensorAnalytics
 from collection_alerts import CollectionAlertsService
 from route_optimization_insights import RouteOptimizationService
+from alert_rules_engine import AlertRulesEngine
 
 # Load environment variables
 load_dotenv()
@@ -1362,6 +1363,87 @@ def api_detect_sensor_anomalies(bin_id):
         hours = int(request.args.get('hours', 24))
         
         result = BinSensorAnalytics.detect_sensor_anomalies(bin_id, hours)
+        
+        status_code = 200 if result.get('success') else 404
+        return jsonify(result), status_code
+        
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+# =============================================
+# ALERT RULES ENGINE ENDPOINTS
+# =============================================
+
+@app.route('/api/alert-rules', methods=['POST'])
+@login_required
+@role_required(['admin'])
+def api_create_alert_rule():
+    """Create a new alert rule (admin only)."""
+    try:
+        data = request.get_json() or {}
+        
+        if not all(k in data for k in ['rule_name', 'condition_type', 'threshold_value', 'action_type']):
+            return jsonify({
+                'success': False,
+                'message': 'rule_name, condition_type, threshold_value, and action_type are required'
+            }), 400
+        
+        result = AlertRulesEngine.create_rule(
+            data.get('rule_name'),
+            data.get('condition_type'),
+            float(data.get('threshold_value')),
+            data.get('action_type')
+        )
+        
+        status_code = 201 if result.get('success') else 400
+        return jsonify(result), status_code
+        
+    except (TypeError, ValueError) as e:
+        return jsonify({
+            'success': False,
+            'message': f'Invalid input: {str(e)}'
+        }), 400
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+@app.route('/api/alert-rules', methods=['GET'])
+@login_required
+def api_get_alert_rules():
+    """Retrieve all alert rules."""
+    try:
+        result = AlertRulesEngine.get_all_rules()
+        return jsonify(result)
+        
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+@app.route('/api/alert-rules/<int:rule_id>', methods=['PUT', 'PATCH'])
+@login_required
+@role_required(['admin'])
+def api_update_alert_rule(rule_id):
+    """Update an alert rule (admin only)."""
+    try:
+        data = request.get_json() or {}
+        
+        result = AlertRulesEngine.update_rule(rule_id, **data)
+        
+        status_code = 200 if result.get('success') else (404 if 'not found' in result.get('message', '').lower() else 400)
+        return jsonify(result), status_code
+        
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+@app.route('/api/alert-rules/<int:rule_id>', methods=['DELETE'])
+@login_required
+@role_required(['admin'])
+def api_delete_alert_rule(rule_id):
+    """Delete an alert rule (admin only)."""
+    try:
+        result = AlertRulesEngine.delete_rule(rule_id)
         
         status_code = 200 if result.get('success') else 404
         return jsonify(result), status_code

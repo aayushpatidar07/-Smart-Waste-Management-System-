@@ -198,9 +198,14 @@
             <div class="card">
                 <div class="card-header bg-white d-flex justify-content-between align-items-center">
                     <h5 class="mb-0"><i class="bi bi-bell text-warning"></i> Recent Alerts</h5>
-                    <button class="btn btn-sm btn-warning" onclick="showCreateAlertForm()">
-                        <i class="bi bi-plus-circle"></i> New Alert
-                    </button>
+                    <div>
+                        <button class="btn btn-sm btn-warning" onclick="showCreateAlertForm()">
+                            <i class="bi bi-plus-circle"></i> New Alert
+                        </button>
+                        <button class="btn btn-sm btn-info" onclick="showAlertRulesManager()">
+                            <i class="bi bi-sliders"></i> Manage Rules
+                        </button>
+                    </div>
                 </div>
                 <div class="card-body">
                     <div class="list-group" id="alertsList">
@@ -457,6 +462,79 @@ function formatDate(dateStr) {
     if (hours < 1) return 'Just now';
     if (hours < 24) return `${hours}h ago`;
     return date.toLocaleDateString();
+}
+
+function showAlertRulesManager() {
+    const action = prompt('Enter action (view, create, delete):\nview - View all rules\ncreate - Create new rule\ndelete - Delete a rule');
+    if (!action) return;
+    
+    if (action === 'view') {
+        $.get('/api/alert-rules', function(result) {
+            if (result.success && result.rules && result.rules.length > 0) {
+                let rulesText = `Active Alert Rules (${result.total}):\n\n`;
+                result.rules.forEach((rule, idx) => {
+                    rulesText += `${idx + 1}. ID: ${rule.id} | ${rule.rule_name}\n   Type: ${rule.condition_type} | Threshold: ${rule.threshold_value}\n   Action: ${rule.action_type} | Active: ${rule.is_active}\n\n`;
+                });
+                alert(rulesText);
+            } else {
+                alert('No alert rules found');
+            }
+        });
+    } else if (action === 'create') {
+        const ruleName = prompt('Enter rule name (min 3 characters):');
+        if (!ruleName || ruleName.length < 3) return;
+        
+        const conditionType = prompt('Enter condition type (filled, overflow, offline, maintenance_due, temperature):');
+        if (!conditionType) return;
+        
+        const thresholdValue = prompt('Enter threshold value (number):');
+        if (!thresholdValue || isNaN(thresholdValue)) return;
+        
+        const actionType = prompt('Enter action type (email, sms, dashboard, all):');
+        if (!actionType) return;
+        
+        $.ajax({
+            url: '/api/alert-rules',
+            type: 'POST',
+            contentType: 'application/json',
+            data: JSON.stringify({
+                rule_name: ruleName,
+                condition_type: conditionType,
+                threshold_value: parseFloat(thresholdValue),
+                action_type: actionType
+            }),
+            success: function(result) {
+                if (result.success) {
+                    alert(`Alert rule created successfully!\nRule ID: ${result.rule_id}`);
+                } else {
+                    alert(`Error: ${result.message}`);
+                }
+            },
+            error: function() {
+                alert('Failed to create alert rule');
+            }
+        });
+    } else if (action === 'delete') {
+        const ruleId = prompt('Enter Rule ID to delete:');
+        if (!ruleId || isNaN(ruleId)) return;
+        
+        $.ajax({
+            url: `/api/alert-rules/${ruleId}`,
+            type: 'DELETE',
+            success: function(result) {
+                if (result.success) {
+                    alert('Alert rule deleted successfully');
+                } else {
+                    alert(`Error: ${result.message}`);
+                }
+            },
+            error: function() {
+                alert('Failed to delete alert rule');
+            }
+        });
+    } else {
+        alert('Invalid action');
+    }
 }
 </script>
 {% endblock %}
