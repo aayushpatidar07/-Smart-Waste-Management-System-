@@ -33,6 +33,7 @@ from vehicle_maintenance import VehicleMaintenanceService
 from bin_sensor_analytics import BinSensorAnalytics
 from collection_alerts import CollectionAlertsService
 from route_optimization_insights import RouteOptimizationService
+from driver_performance import DriverPerformanceService
 from alert_rules_engine import AlertRulesEngine
 
 # Load environment variables
@@ -1447,6 +1448,88 @@ def api_delete_alert_rule(rule_id):
         
         status_code = 200 if result.get('success') else 404
         return jsonify(result), status_code
+        
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+# =============================================
+# DRIVER PERFORMANCE ENDPOINTS
+# =============================================
+
+@app.route('/api/drivers/<int:driver_id>/trips', methods=['POST'])
+@login_required
+def api_record_driver_trip(driver_id):
+    """Record a completed trip for a driver."""
+    try:
+        data = request.get_json() or {}
+        
+        required_fields = ['route_id', 'bins_collected', 'time_taken_minutes', 'distance_km', 'fuel_used']
+        if not all(field in data for field in required_fields):
+            return jsonify({
+                'success': False,
+                'message': 'Missing required fields: ' + ', '.join(required_fields)
+            }), 400
+        
+        result = DriverPerformanceService().record_trip_completion(
+            driver_id,
+            int(data.get('route_id')),
+            int(data.get('bins_collected')),
+            float(data.get('time_taken_minutes')),
+            float(data.get('distance_km')),
+            float(data.get('fuel_used'))
+        )
+        
+        status_code = 200 if result.get('success') else 400
+        return jsonify(result), status_code
+        
+    except (TypeError, ValueError):
+        return jsonify({
+            'success': False,
+            'message': 'Invalid input types'
+        }), 400
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+@app.route('/api/drivers/<int:driver_id>/performance', methods=['GET'])
+@login_required
+def api_get_driver_performance(driver_id):
+    """Get performance summary for a specific driver."""
+    try:
+        days = request.args.get('days', 30, type=int)
+        
+        if days < 1 or days > 365:
+            return jsonify({
+                'success': False,
+                'message': 'Days must be between 1 and 365'
+            }), 400
+        
+        result = DriverPerformanceService().get_driver_performance_summary(driver_id, days)
+        
+        status_code = 200 if result.get('success') else 404
+        return jsonify(result), status_code
+        
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+@app.route('/api/drivers/top-performers', methods=['GET'])
+@login_required
+def api_get_top_drivers():
+    """Get top performing drivers."""
+    try:
+        limit = request.args.get('limit', 5, type=int)
+        days = request.args.get('days', 30, type=int)
+        
+        if limit < 1 or limit > 20:
+            return jsonify({
+                'success': False,
+                'message': 'Limit must be between 1 and 20'
+            }), 400
+        
+        result = DriverPerformanceService().get_top_drivers(limit, days)
+        return jsonify(result)
         
     except Exception as e:
         return jsonify({'success': False, 'error': str(e)}), 500
