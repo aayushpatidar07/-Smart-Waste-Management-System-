@@ -80,6 +80,41 @@
         </div>
     </div>
     
+    <div class="row g-3 mb-4">
+        <div class="col-md-6">
+            <div class="card border-primary">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0"><i class="bi bi-bar-chart"></i> My Performance Metrics</h5>
+                </div>
+                <div class="card-body" id="performanceMetrics">
+                    <div class="text-center">
+                        <div class="spinner-border text-primary"></div>
+                    </div>
+                </div>
+                <div class="card-footer">
+                    <button class="btn btn-sm btn-primary" onclick="loadPerformanceMetrics()">
+                        <i class="bi bi-arrow-clockwise"></i> Refresh
+                    </button>
+                    <button class="btn btn-sm btn-outline-primary" onclick="recordTrip()">
+                        <i class="bi bi-plus-circle"></i> Record Trip
+                    </button>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-6">
+            <div class="card border-success">
+                <div class="card-header bg-success text-white">
+                    <h5 class="mb-0"><i class="bi bi-trophy"></i> Top Performers</h5>
+                </div>
+                <div class="card-body" id="topPerformers">
+                    <div class="text-center">
+                        <div class="spinner-border text-success"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
     <div class="card">
         <div class="card-header bg-white">
             <h5 class="mb-0">Full Bins - Priority Collection</h5>
@@ -115,9 +150,13 @@
 $(document).ready(function() {
     loadStats();
     loadFullBins();
+    loadPerformanceMetrics();
+    loadTopPerformers();
     setInterval(function() {
         loadStats();
         loadFullBins();
+        loadPerformanceMetrics();
+        loadTopPerformers();
     }, 30000);
 });
 
@@ -156,6 +195,114 @@ function loadFullBins() {
                 </tr>
             `);
         });
+    });
+}
+
+function loadPerformanceMetrics() {
+    const driverId = {{ session.user_id }};
+    $.get(`/api/drivers/${driverId}/performance?days=30`, function(data) {
+        const container = $('#performanceMetrics');
+        
+        if (!data.success) {
+            container.html('<p class="text-muted">No performance data available yet</p>');
+            return;
+        }
+        
+        let html = `
+            <div class="row g-3">
+                <div class="col-12">
+                    <p><strong>Rating:</strong> <span class="badge bg-${data.performance_rating === 'Excellent' ? 'success' : data.performance_rating === 'Good' ? 'info' : 'warning'}">${data.performance_rating}</span></p>
+                </div>
+                <div class="col-6">
+                    <small class="text-muted">Total Trips</small>
+                    <h5>${data.total_trips}</h5>
+                </div>
+                <div class="col-6">
+                    <small class="text-muted">Bins Collected</small>
+                    <h5>${data.total_bins_collected}</h5>
+                </div>
+                <div class="col-6">
+                    <small class="text-muted">Avg Efficiency</small>
+                    <h5>${data.average_efficiency}</h5>
+                </div>
+                <div class="col-6">
+                    <small class="text-muted">Distance (km)</small>
+                    <h5>${data.total_distance_km}</h5>
+                </div>
+            </div>
+        `;
+        container.html(html);
+    }).fail(function() {
+        $('#performanceMetrics').html('<p class="text-muted">Unable to load performance data</p>');
+    });
+}
+
+function loadTopPerformers() {
+    $.get('/api/drivers/top-performers?limit=5&days=30', function(data) {
+        const container = $('#topPerformers');
+        
+        if (!data.success || !data.top_drivers || data.top_drivers.length === 0) {
+            container.html('<p class="text-muted">No performance data available</p>');
+            return;
+        }
+        
+        let html = '<ol>';
+        data.top_drivers.forEach(driver => {
+            html += `
+                <li class="mb-2">
+                    <strong>${driver.driver_name}</strong>
+                    <br>
+                    <small class="text-muted">Efficiency: ${driver.average_efficiency} | Trips: ${driver.trips}</small>
+                </li>
+            `;
+        });
+        html += '</ol>';
+        container.html(html);
+    }).fail(function() {
+        $('#topPerformers').html('<p class="text-muted">Unable to load top performers</p>');
+    });
+}
+
+function recordTrip() {
+    const routeId = prompt('Enter route ID:');
+    if (!routeId) return;
+    
+    const binsCollected = prompt('Enter number of bins collected:');
+    if (!binsCollected || isNaN(binsCollected)) return;
+    
+    const timeTaken = prompt('Enter time taken (minutes):');
+    if (!timeTaken || isNaN(timeTaken)) return;
+    
+    const distance = prompt('Enter distance traveled (km):');
+    if (!distance || isNaN(distance)) return;
+    
+    const fuelUsed = prompt('Enter fuel used (liters):');
+    if (!fuelUsed || isNaN(fuelUsed)) return;
+    
+    const driverId = {{ session.user_id }};
+    $.ajax({
+        url: `/api/drivers/${driverId}/trips`,
+        type: 'POST',
+        contentType: 'application/json',
+        data: JSON.stringify({
+            route_id: parseInt(routeId),
+            bins_collected: parseInt(binsCollected),
+            time_taken_minutes: parseFloat(timeTaken),
+            distance_km: parseFloat(distance),
+            fuel_used: parseFloat(fuelUsed)
+        }),
+        success: function(result) {
+            if (result.success) {
+                alert(`Trip recorded successfully!\nTrip ID: ${result.trip_id}`);
+                loadPerformanceMetrics();
+                loadTopPerformers();
+            } else {
+                alert(`Error: ${result.message}`);
+            }
+        },
+        error: function() {
+            alert('Failed to record trip');
+        }
     });
 }
 </script>
