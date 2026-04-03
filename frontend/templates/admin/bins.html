@@ -142,6 +142,9 @@
                         <button type="button" class="btn btn-outline-info" onclick="viewSensorAnalytics()">
                             <i class="bi bi-cpu"></i> Sensors
                         </button>
+                        <button type="button" class="btn btn-outline-success" onclick="analyzeWasteComposition()">
+                            <i class="bi bi-pie-chart"></i> Composition
+                        </button>
                     </div>
                 </div>
             </form>
@@ -1688,6 +1691,117 @@ function submitBasicWasteLog() {
                 ? (xhr.responseJSON.message || xhr.responseJSON.error)
                 : 'Request failed';
             alert('❌ ' + msg);
+        }
+    });
+}
+
+function analyzeWasteComposition() {
+    const binId = prompt('Enter Bin ID to analyze waste composition:');
+    if (!binId || isNaN(binId)) return;
+    
+    $.get(`/api/waste-composition/${binId}/summary?days=30`, function(data) {
+        if (!data.success) {
+            alert(`Error: ${data.message}`);
+            return;
+        }
+        
+        let html = `
+            <div class="row g-3">
+                <div class="col-12">
+                    <h6>Bin: ${data.location} (Zone: ${data.zone})</h6>
+                    <p class="text-muted">Period: Last ${data.period_days} days | Records: ${data.total_records}</p>
+                </div>
+                <div class="col-md-3">
+                    <div class="card bg-light">
+                        <div class="card-body text-center">
+                            <h5>${data.average_composition.organic}%</h5>
+                            <small class="text-muted">Organic</small>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="card bg-light">
+                        <div class="card-body text-center">
+                            <h5>${data.average_composition.recyclables}%</h5>
+                            <small class="text-muted">Recyclables</small>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="card bg-light">
+                        <div class="card-body text-center">
+                            <h5>${data.average_composition.hazardous}%</h5>
+                            <small class="text-muted">Hazardous</small>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="card bg-light">
+                        <div class="card-body text-center">
+                            <h5>${data.average_composition.inert}%</h5>
+                            <small class="text-muted">Inert</small>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-12">
+                    <p><strong>Dominant Type:</strong> ${data.dominant_waste_type.charAt(0).toUpperCase() + data.dominant_waste_type.slice(1)}</p>
+                    <p><strong>Recommendation:</strong> ${data.recommendation}</p>
+                </div>
+                <div class="col-12">
+                    <button class="btn btn-sm btn-primary" onclick="recordNewComposition(${binId})">
+                        <i class="bi bi-plus-circle"></i> Record New Composition
+                    </button>
+                </div>
+            </div>
+        `;
+        
+        $('#modalTitle').text('Waste Composition Analysis');
+        $('#modalBody').html(html);
+        new bootstrap.Modal(document.getElementById('binModal')).show();
+    }).fail(function(xhr) {
+        alert('Failed to load composition data');
+    });
+}
+
+function recordNewComposition(binId) {
+    const organic = prompt('Enter organic waste percentage (0-100):');
+    if (organic === null || isNaN(organic)) return;
+    
+    const recyclables = prompt('Enter recyclables percentage (0-100):');
+    if (recyclables === null || isNaN(recyclables)) return;
+    
+    const hazardous = prompt('Enter hazardous waste percentage (0-100):');
+    if (hazardous === null || isNaN(hazardous)) return;
+    
+    const inert = 100 - parseFloat(organic) - parseFloat(recyclables) - parseFloat(hazardous);
+    if (inert < 0 || inert > 100) {
+        alert('Percentages must sum to 100');
+        return;
+    }
+    
+    const notes = prompt('Add notes (optional):');
+    
+    $.ajax({
+        url: `/api/waste-composition/${binId}/record`,
+        type: 'POST',
+        contentType: 'application/json',
+        data: JSON.stringify({
+            organic_percentage: parseFloat(organic),
+            recyclables_percentage: parseFloat(recyclables),
+            hazardous_percentage: parseFloat(hazardous),
+            inert_percentage: inert,
+            notes: notes || ''
+        }),
+        success: function(result) {
+            if (result.success) {
+                alert(`✓ Composition recorded!\nComposition ID: ${result.composition_id}`);
+                analyzeWasteComposition();
+            } else {
+                alert(`Error: ${result.message}`);
+            }
+        },
+        error: function() {
+            alert('Failed to record composition');
         }
     });
 }
