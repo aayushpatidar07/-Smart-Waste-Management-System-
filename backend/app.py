@@ -35,6 +35,7 @@ from collection_alerts import CollectionAlertsService
 from route_optimization_insights import RouteOptimizationService
 from driver_performance import DriverPerformanceService
 from alert_rules_engine import AlertRulesEngine
+from waste_composition import WasteCompositionService
 
 # Load environment variables
 load_dotenv()
@@ -1530,6 +1531,89 @@ def api_get_top_drivers():
         
         result = DriverPerformanceService().get_top_drivers(limit, days)
         return jsonify(result)
+        
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+# =============================================
+# WASTE COMPOSITION ENDPOINTS
+# =============================================
+
+@app.route('/api/waste-composition/<int:bin_id>/record', methods=['POST'])
+@login_required
+def api_record_waste_composition(bin_id):
+    """Record waste composition analysis for a bin."""
+    try:
+        data = request.get_json() or {}
+        
+        required_fields = ['organic_percentage', 'recyclables_percentage', 'hazardous_percentage', 'inert_percentage']
+        if not all(field in data for field in required_fields):
+            return jsonify({
+                'success': False,
+                'message': 'All percentage fields are required'
+            }), 400
+        
+        result = WasteCompositionService().record_waste_composition(
+            bin_id,
+            float(data.get('organic_percentage')),
+            float(data.get('recyclables_percentage')),
+            float(data.get('hazardous_percentage')),
+            float(data.get('inert_percentage')),
+            data.get('notes', '')
+        )
+        
+        status_code = 200 if result.get('success') else 400
+        return jsonify(result), status_code
+        
+    except (TypeError, ValueError):
+        return jsonify({
+            'success': False,
+            'message': 'Invalid input types for percentages'
+        }), 400
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+@app.route('/api/waste-composition/<int:bin_id>/summary', methods=['GET'])
+@login_required
+def api_get_composition_summary(bin_id):
+    """Get waste composition summary for a bin."""
+    try:
+        days = request.args.get('days', 30, type=int)
+        
+        if days < 1 or days > 365:
+            return jsonify({
+                'success': False,
+                'message': 'Days must be between 1 and 365'
+            }), 400
+        
+        result = WasteCompositionService().get_composition_summary(bin_id, days)
+        
+        status_code = 200 if result.get('success') else 404
+        return jsonify(result), status_code
+        
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+@app.route('/api/waste-composition/zone/<string:zone>/analysis', methods=['GET'])
+@login_required
+def api_get_zone_composition(zone):
+    """Get waste composition analysis for a zone."""
+    try:
+        days = request.args.get('days', 30, type=int)
+        
+        if days < 1 or days > 365:
+            return jsonify({
+                'success': False,
+                'message': 'Days must be between 1 and 365'
+            }), 400
+        
+        result = WasteCompositionService().get_zone_composition_analysis(zone, days)
+        
+        status_code = 200 if result.get('success') else 404
+        return jsonify(result), status_code
         
     except Exception as e:
         return jsonify({'success': False, 'error': str(e)}), 500
