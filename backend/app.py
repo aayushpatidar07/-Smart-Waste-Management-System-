@@ -36,6 +36,7 @@ from route_optimization_insights import RouteOptimizationService
 from driver_performance import DriverPerformanceService
 from alert_rules_engine import AlertRulesEngine
 from waste_composition import WasteCompositionService
+from environmental_impact import EnvironmentalImpactService
 
 # Load environment variables
 load_dotenv()
@@ -1614,6 +1615,112 @@ def api_get_zone_composition(zone):
         
         status_code = 200 if result.get('success') else 404
         return jsonify(result), status_code
+        
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+# =============================================
+# ENVIRONMENTAL IMPACT ENDPOINTS
+# =============================================
+
+@app.route('/api/environmental/carbon-savings', methods=['POST'])
+@login_required
+def api_calculate_carbon_savings():
+    """Calculate carbon savings from recycling and composting."""
+    try:
+        data = request.get_json() or {}
+        
+        recycled_kg = float(data.get('waste_recycled_kg', 0))
+        composted_kg = float(data.get('waste_composted_kg', 0))
+        
+        result = EnvironmentalImpactService().calculate_carbon_savings(recycled_kg, composted_kg)
+        
+        status_code = 200 if result.get('success') else 400
+        return jsonify(result), status_code
+        
+    except (TypeError, ValueError):
+        return jsonify({
+            'success': False,
+            'message': 'Invalid input types'
+        }), 400
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+@app.route('/api/environmental/impact/record', methods=['POST'])
+@login_required
+@role_required(['admin', 'staff'])
+def api_record_environmental_impact():
+    """Record environmental impact metrics for a zone."""
+    try:
+        data = request.get_json() or {}
+        
+        required_fields = ['zone', 'total_waste_collected_kg', 'recycled_percentage', 
+                          'composted_percentage', 'landfill_percentage']
+        if not all(field in data for field in required_fields):
+            return jsonify({
+                'success': False,
+                'message': 'Missing required fields'
+            }), 400
+        
+        result = EnvironmentalImpactService().record_environmental_impact(
+            data.get('zone'),
+            float(data.get('total_waste_collected_kg')),
+            float(data.get('recycled_percentage')),
+            float(data.get('composted_percentage')),
+            float(data.get('landfill_percentage'))
+        )
+        
+        status_code = 200 if result.get('success') else 400
+        return jsonify(result), status_code
+        
+    except (TypeError, ValueError):
+        return jsonify({
+            'success': False,
+            'message': 'Invalid input types'
+        }), 400
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+@app.route('/api/environmental/zone/<string:zone>/summary', methods=['GET'])
+@login_required
+def api_get_zone_environmental_summary(zone):
+    """Get environmental impact summary for a zone."""
+    try:
+        days = request.args.get('days', 30, type=int)
+        
+        if days < 1 or days > 365:
+            return jsonify({
+                'success': False,
+                'message': 'Days must be between 1 and 365'
+            }), 400
+        
+        result = EnvironmentalImpactService().get_zone_environmental_summary(zone, days)
+        
+        status_code = 200 if result.get('success') else 404
+        return jsonify(result), status_code
+        
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+@app.route('/api/environmental/system-impact', methods=['GET'])
+@login_required
+def api_get_system_wide_impact():
+    """Get system-wide environmental impact metrics."""
+    try:
+        days = request.args.get('days', 30, type=int)
+        
+        if days < 1 or days > 365:
+            return jsonify({
+                'success': False,
+                'message': 'Days must be between 1 and 365'
+            }), 400
+        
+        result = EnvironmentalImpactService().get_system_wide_impact(days)
+        return jsonify(result)
         
     except Exception as e:
         return jsonify({'success': False, 'error': str(e)}), 500
