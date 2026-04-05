@@ -37,6 +37,7 @@ from driver_performance import DriverPerformanceService
 from alert_rules_engine import AlertRulesEngine
 from waste_composition import WasteCompositionService
 from environmental_impact import EnvironmentalImpactService
+from citizen_engagement import CitizenEngagementService
 
 # Load environment variables
 load_dotenv()
@@ -1720,6 +1721,99 @@ def api_get_system_wide_impact():
             }), 400
         
         result = EnvironmentalImpactService().get_system_wide_impact(days)
+        return jsonify(result)
+        
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+# =============================================
+# CITIZEN ENGAGEMENT ENDPOINTS
+# =============================================
+
+@app.route('/api/citizens/<int:citizen_id>/reports', methods=['POST'])
+@login_required
+def api_record_citizen_report(citizen_id):
+    """Record a citizen report or complaint."""
+    try:
+        data = request.get_json() or {}
+        
+        required_fields = ['report_type', 'location', 'description']
+        if not all(field in data for field in required_fields):
+            return jsonify({
+                'success': False,
+                'message': 'report_type, location, and description are required'
+            }), 400
+        
+        result = CitizenEngagementService().record_citizen_report(
+            citizen_id,
+            data.get('report_type'),
+            data.get('location'),
+            data.get('description'),
+            data.get('status', 'submitted')
+        )
+        
+        status_code = 200 if result.get('success') else 400
+        return jsonify(result), status_code
+        
+    except (TypeError, ValueError):
+        return jsonify({
+            'success': False,
+            'message': 'Invalid input types'
+        }), 400
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+@app.route('/api/citizens/<int:citizen_id>/engagement', methods=['GET'])
+@login_required
+def api_get_citizen_engagement(citizen_id):
+    """Get engagement score and metrics for a citizen."""
+    try:
+        result = CitizenEngagementService().get_citizen_engagement_score(citizen_id)
+        
+        status_code = 200 if result.get('success') else 404
+        return jsonify(result), status_code
+        
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+@app.route('/api/citizens/top-engaged', methods=['GET'])
+@login_required
+def api_get_top_engaged_citizens():
+    """Get top engaged citizens."""
+    try:
+        limit = request.args.get('limit', 10, type=int)
+        days = request.args.get('days', 30, type=int)
+        
+        if limit < 1 or limit > 50:
+            return jsonify({
+                'success': False,
+                'message': 'Limit must be between 1 and 50'
+            }), 400
+        
+        result = CitizenEngagementService().get_top_engaged_citizens(limit, days)
+        return jsonify(result)
+        
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+@app.route('/api/citizens/report-statistics', methods=['GET'])
+@login_required
+def api_get_report_statistics():
+    """Get overall citizen report statistics."""
+    try:
+        days = request.args.get('days', 30, type=int)
+        
+        if days < 1 or days > 365:
+            return jsonify({
+                'success': False,
+                'message': 'Days must be between 1 and 365'
+            }), 400
+        
+        result = CitizenEngagementService().get_report_statistics(days)
         return jsonify(result)
         
     except Exception as e:
