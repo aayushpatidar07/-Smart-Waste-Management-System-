@@ -88,6 +88,33 @@
         </div>
     </div>
     
+    <div class="row g-4 mt-4">
+        <div class="col-md-6">
+            <div class="card border-success h-100">
+                <div class="card-header bg-success text-white">
+                    <h5 class="mb-0"><i class="bi bi-award"></i> My Engagement</h5>
+                </div>
+                <div class="card-body" id="engagementCard">
+                    <div class="text-center">
+                        <div class="spinner-border text-success"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-6">
+            <div class="card border-info h-100">
+                <div class="card-header bg-info text-white">
+                    <h5 class="mb-0"><i class="bi bi-people"></i> Community Impact</h5>
+                </div>
+                <div class="card-body" id="communityCard">
+                    <div class="text-center">
+                        <div class="spinner-border text-info"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
     <div class="card mt-4">
         <div class="card-header bg-white">
             <h5 class="mb-0">My Reports</h5>
@@ -159,6 +186,8 @@
 <script>
 $(document).ready(function() {
     loadMyReports();
+    loadEngagement();
+    loadCommunityStats();
 });
 
 function loadMyReports() {
@@ -188,6 +217,91 @@ function loadMyReports() {
                 </tr>
             `);
         });
+    });
+}
+
+function loadEngagement() {
+    const userId = {{ session.user_id }};
+    $.get(`/api/citizens/${userId}/engagement`, function(data) {
+        const container = $('#engagementCard');
+        
+        if (!data.success) {
+            container.html('<p class="text-muted">No engagement data available yet</p>');
+            return;
+        }
+        
+        let badgeColor = 'secondary';
+        if (data.engagement_level === 'Champion') badgeColor = 'danger';
+        else if (data.engagement_level === 'Active') badgeColor = 'success';
+        else if (data.engagement_level === 'Engaged') badgeColor = 'info';
+        
+        let html = `
+            <div class="text-center mb-3">
+                <h2 class="display-4 text-success">${data.engagement_score}</h2>
+                <p class="text-muted">Engagement Score (0-100)</p>
+                <span class="badge bg-${badgeColor}" style="font-size: 1rem;">${data.engagement_level}</span>
+            </div>
+            <div class="row g-2">
+                <div class="col-6">
+                    <small class="text-muted">Reports Submitted</small>
+                    <h5>${data.metrics.total_reports}</h5>
+                </div>
+                <div class="col-6">
+                    <small class="text-muted">Resolved</small>
+                    <h5>${data.metrics.resolved_reports}</h5>
+                </div>
+                <div class="col-6">
+                    <small class="text-muted">Resolution Rate</small>
+                    <h5>${data.metrics.resolution_rate}%</h5>
+                </div>
+                <div class="col-6">
+                    <small class="text-muted">Member Since</small>
+                    <h5>${data.metrics.member_tenure_months}m</h5>
+                </div>
+            </div>
+        `;
+        container.html(html);
+    });
+}
+
+function loadCommunityStats() {
+    $.get('/api/citizens/report-statistics?days=30', function(data) {
+        const container = $('#communityCard');
+        
+        if (!data.success) {
+            container.html('<p class="text-muted">No community data available</p>');
+            return;
+        }
+        
+        let html = `
+            <div class="row g-2">
+                <div class="col-6">
+                    <small class="text-muted">Total Reports</small>
+                    <h5>${data.total_reports}</h5>
+                </div>
+                <div class="col-6">
+                    <small class="text-muted">Resolution Rate</small>
+                    <h5>${data.resolution_rate}%</h5>
+                </div>
+                <div class="col-6">
+                    <small class="text-muted">Active Contributors</small>
+                    <h5>${data.unique_reporters}</h5>
+                </div>
+                <div class="col-6">
+                    <small class="text-muted">Avg Reports/Citizen</small>
+                    <h5>${data.average_reports_per_citizen}</h5>
+                </div>
+            </div>
+            <div class="mt-3 pt-2 border-top">
+                <small class="text-muted">Report Status Breakdown:</small>
+                <div class="d-flex gap-2 mt-2" style="flex-wrap: wrap;">
+                    <span class="badge bg-warning">${data.report_status.pending} Pending</span>
+                    <span class="badge bg-info">${data.report_status.acknowledged} Acknowledged</span>
+                    <span class="badge bg-success">${data.report_status.resolved} Resolved</span>
+                </div>
+            </div>
+        `;
+        container.html(html);
     });
 }
 </script>
