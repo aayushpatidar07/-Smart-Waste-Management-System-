@@ -38,6 +38,7 @@ from alert_rules_engine import AlertRulesEngine
 from waste_composition import WasteCompositionService
 from environmental_impact import EnvironmentalImpactService
 from citizen_engagement import CitizenEngagementService
+from resource_utilization import ResourceUtilizationService
 
 # Load environment variables
 load_dotenv()
@@ -1814,6 +1815,108 @@ def api_get_report_statistics():
             }), 400
         
         result = CitizenEngagementService().get_report_statistics(days)
+        return jsonify(result)
+        
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+# =============================================
+# RESOURCE UTILIZATION ENDPOINTS
+# =============================================
+
+@app.route('/api/bins/<int:bin_id>/utilization/record', methods=['POST'])
+@login_required
+def api_record_bin_utilization(bin_id):
+    """Record bin utilization from collection."""
+    try:
+        data = request.get_json() or {}
+        
+        required_fields = ['capacity_ml', 'waste_collected_ml', 'collection_date']
+        if not all(field in data for field in required_fields):
+            return jsonify({
+                'success': False,
+                'message': 'capacity_ml, waste_collected_ml, and collection_date are required'
+            }), 400
+        
+        result = ResourceUtilizationService().record_bin_utilization(
+            bin_id,
+            float(data.get('capacity_ml')),
+            float(data.get('waste_collected_ml')),
+            data.get('collection_date')
+        )
+        
+        status_code = 200 if result.get('success') else 400
+        return jsonify(result), status_code
+        
+    except (TypeError, ValueError):
+        return jsonify({
+            'success': False,
+            'message': 'Invalid input types'
+        }), 400
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+@app.route('/api/bins/<int:bin_id>/utilization/analysis', methods=['GET'])
+@login_required
+def api_get_bin_utilization_analysis(bin_id):
+    """Get bin utilization analysis."""
+    try:
+        days = request.args.get('days', 30, type=int)
+        
+        if days < 1 or days > 365:
+            return jsonify({
+                'success': False,
+                'message': 'Days must be between 1 and 365'
+            }), 400
+        
+        result = ResourceUtilizationService().get_bin_utilization_analysis(bin_id, days)
+        
+        status_code = 200 if result.get('success') else 404
+        return jsonify(result), status_code
+        
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+@app.route('/api/routes/<int:route_id>/efficiency', methods=['GET'])
+@login_required
+def api_get_route_efficiency(route_id):
+    """Get route collection efficiency analysis."""
+    try:
+        days = request.args.get('days', 30, type=int)
+        
+        if days < 1 or days > 365:
+            return jsonify({
+                'success': False,
+                'message': 'Days must be between 1 and 365'
+            }), 400
+        
+        result = ResourceUtilizationService().get_route_efficiency(route_id, days)
+        
+        status_code = 200 if result.get('success') else 404
+        return jsonify(result), status_code
+        
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+@app.route('/api/resources/underutilized', methods=['GET'])
+@login_required
+def api_get_underutilized_resources():
+    """Get list of underutilized resources."""
+    try:
+        threshold = request.args.get('threshold', 30, type=float)
+        days = request.args.get('days', 30, type=int)
+        
+        if threshold < 0 or threshold > 100:
+            return jsonify({
+                'success': False,
+                'message': 'Threshold must be between 0 and 100'
+            }), 400
+        
+        result = ResourceUtilizationService().get_underutilized_resources(threshold, days)
         return jsonify(result)
         
     except Exception as e:

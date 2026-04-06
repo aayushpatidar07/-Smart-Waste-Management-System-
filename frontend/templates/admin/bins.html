@@ -145,6 +145,9 @@
                         <button type="button" class="btn btn-outline-success" onclick="analyzeWasteComposition()">
                             <i class="bi bi-pie-chart"></i> Composition
                         </button>
+                        <button type="button" class="btn btn-outline-warning" onclick="analyzeResourceUtilization()">
+                            <i class="bi bi-speedometer"></i> Utilization
+                        </button>
                     </div>
                 </div>
             </form>
@@ -1802,6 +1805,115 @@ function recordNewComposition(binId) {
         },
         error: function() {
             alert('Failed to record composition');
+        }
+    });
+}
+
+function analyzeResourceUtilization() {
+    const binId = prompt('Enter Bin ID to analyze resource utilization:');
+    if (!binId || isNaN(binId)) return;
+    
+    $.get(`/api/bins/${binId}/utilization/analysis?days=30`, function(data) {
+        if (!data.success) {
+            alert(`Error: ${data.message}`);
+            return;
+        }
+        
+        let html = `
+            <div class="row g-3">
+                <div class="col-12">
+                    <h6>Bin: ${data.location} (Zone: ${data.zone})</h6>
+                    <span class="badge bg-${data.efficiency_rating === 'Excellent' ? 'success' : data.efficiency_rating === 'Good' ? 'info' : 'warning'}">
+                        ${data.efficiency_rating}
+                    </span>
+                    <p class="text-muted mt-2">Period: Last ${data.period_days} days | Collections: ${data.collections}</p>
+                </div>
+                <div class="col-md-6">
+                    <div class="card bg-light">
+                        <div class="card-body text-center">
+                            <h5>${data.utilization_metrics.average_utilization_percent}%</h5>
+                            <small class="text-muted">Average Utilization</small>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="card bg-light">
+                        <div class="card-body text-center">
+                            <h5>${data.utilization_metrics.max_utilization_percent}%</h5>
+                            <small class="text-muted">Peak Utilization</small>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="card bg-light">
+                        <div class="card-body text-center">
+                            <h5>${data.utilization_metrics.min_utilization_percent}%</h5>
+                            <small class="text-muted">Minimum Utilization</small>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="card bg-light">
+                        <div class="card-body text-center">
+                            <h5>${data.utilization_variance}%</h5>
+                            <small class="text-muted">Variance</small>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-12">
+                    <p><small class="text-muted">Total Waste Collected:</small></p>
+                    <h5>${(data.total_waste_collected_ml / 1000).toFixed(2)} L</h5>
+                </div>
+                <div class="col-12">
+                    <button class="btn btn-sm btn-primary" onclick="recordBinUtilization(${binId})">
+                        <i class="bi bi-plus-circle"></i> Record New Collection
+                    </button>
+                </div>
+            </div>
+        `;
+        
+        $('#modalTitle').text('Resource Utilization Analysis');
+        $('#modalBody').html(html);
+        new bootstrap.Modal(document.getElementById('binModal')).show();
+    }).fail(function(xhr) {
+        alert('Failed to load utilization data');
+    });
+}
+
+function recordBinUtilization(binId) {
+    const capacity = prompt('Enter bin capacity (milliliters):');
+    if (!capacity || isNaN(capacity)) return;
+    
+    const collected = prompt('Enter waste collected (milliliters):');
+    if (!collected || isNaN(collected)) return;
+    
+    if (parseFloat(collected) > parseFloat(capacity)) {
+        alert('Collected amount cannot exceed capacity');
+        return;
+    }
+    
+    const date = prompt('Enter collection date (YYYY-MM-DD):');
+    if (!date) return;
+    
+    $.ajax({
+        url: `/api/bins/${binId}/utilization/record`,
+        type: 'POST',
+        contentType: 'application/json',
+        data: JSON.stringify({
+            capacity_ml: parseFloat(capacity),
+            waste_collected_ml: parseFloat(collected),
+            collection_date: date
+        }),
+        success: function(result) {
+            if (result.success) {
+                alert(`✓ Utilization recorded!\nUtilization: ${result.data.utilization_percent}%`);
+                analyzeResourceUtilization();
+            } else {
+                alert(`Error: ${result.message}`);
+            }
+        },
+        error: function() {
+            alert('Failed to record utilization');
         }
     });
 }
