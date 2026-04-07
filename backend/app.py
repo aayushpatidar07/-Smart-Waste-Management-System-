@@ -39,6 +39,7 @@ from waste_composition import WasteCompositionService
 from environmental_impact import EnvironmentalImpactService
 from citizen_engagement import CitizenEngagementService
 from resource_utilization import ResourceUtilizationService
+from data_quality import DataQualityService
 
 # Load environment variables
 load_dotenv()
@@ -1917,6 +1918,73 @@ def api_get_underutilized_resources():
             }), 400
         
         result = ResourceUtilizationService().get_underutilized_resources(threshold, days)
+        return jsonify(result)
+        
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+# =============================================
+# DATA QUALITY ASSESSMENT ENDPOINTS
+# =============================================
+
+@app.route('/api/bins/<int:bin_id>/quality/assess', methods=['GET'])
+@login_required
+def api_assess_bin_data_quality(bin_id):
+    """Assess data quality for a specific bin."""
+    try:
+        days = request.args.get('days', 30, type=int)
+        
+        if days < 1 or days > 365:
+            return jsonify({
+                'success': False,
+                'message': 'Days must be between 1 and 365'
+            }), 400
+        
+        result = DataQualityService().assess_bin_data_quality(bin_id, days)
+        
+        status_code = 200 if result.get('success') else 404
+        return jsonify(result), status_code
+        
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+@app.route('/api/quality/system-overview', methods=['GET'])
+@login_required
+def api_get_system_data_quality_overview():
+    """Get overall system data quality metrics."""
+    try:
+        days = request.args.get('days', 30, type=int)
+        
+        if days < 1 or days > 365:
+            return jsonify({
+                'success': False,
+                'message': 'Days must be between 1 and 365'
+            }), 400
+        
+        result = DataQualityService().get_system_data_quality_overview(days)
+        return jsonify(result)
+        
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+@app.route('/api/quality/low-quality-bins', methods=['GET'])
+@login_required
+def api_identify_low_quality_bins():
+    """Identify bins with low data quality."""
+    try:
+        threshold = request.args.get('threshold', 70, type=float)
+        days = request.args.get('days', 30, type=int)
+        
+        if threshold < 0 or threshold > 100:
+            return jsonify({
+                'success': False,
+                'message': 'Threshold must be between 0 and 100'
+            }), 400
+        
+        result = DataQualityService().identify_low_quality_bins(threshold, days)
         return jsonify(result)
         
     except Exception as e:

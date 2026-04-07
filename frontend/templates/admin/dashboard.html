@@ -235,6 +235,31 @@
             </div>
         </div>
     </div>
+
+    <!-- Data Quality Assessment Section -->
+    <div class="row g-3 mb-4">
+        <div class="col-12">
+            <div class="card border-info">
+                <div class="card-header bg-info text-white d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0"><i class="bi bi-clipboard-check"></i> Data Quality Assessment</h5>
+                    <div>
+                        <button class="btn btn-sm btn-light" onclick="assessBinDataQuality()">
+                            <i class="bi bi-search"></i> Bin Quality
+                        </button>
+                        <button class="btn btn-sm btn-light" onclick="assessSystemDataQuality()">
+                            <i class="bi bi-graph-up"></i> System Overview
+                        </button>
+                        <button class="btn btn-sm btn-light" onclick="identifyPoorQualityBins()">
+                            <i class="bi bi-exclamation-triangle"></i> Low Quality Bins
+                        </button>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <p class="text-muted"><i class="bi bi-info-circle"></i> Use these tools to assess data quality across bins and identify data integrity issues.</p>
+                </div>
+            </div>
+        </div>
+    </div>
 </div>
 {% endblock %}
 
@@ -638,6 +663,89 @@ function recordEnvironmentalImpact() {
         },
         error: function() {
             alert('Failed to record environmental impact');
+        }
+    });
+}
+
+function assessBinDataQuality() {
+    const binId = prompt('Enter Bin ID:');
+    if (!binId || isNaN(binId)) return;
+    
+    const days = prompt('Analyze last how many days? (default 30):', '30');
+    if (!days || isNaN(days) || days < 1) return;
+    
+    $.ajax({
+        url: `/api/bins/${binId}/quality/assess?days=${days}`,
+        type: 'GET',
+        success: function(result) {
+            if (result.success) {
+                const q = result.data_quality;
+                alert(`📊 Data Quality Report - Bin ${binId}\n\nLocation: ${result.location}\nZone: ${result.zone}\nPeriod: ${result.period_days} days\n\nQuality Grade: ${result.quality_grade}\nStatus: ${result.quality_status}\n\nMetrics:\n  Overall Score: ${q.overall_score}%\n  Completeness: ${q.completeness_percent}%\n  Accuracy: ${q.accuracy_percent}%\n\nDetails:\n  Expected Readings: ${result.metrics.expected_readings}\n  Actual Readings: ${result.metrics.actual_readings}\n  Anomalies: ${result.metrics.anomalies_detected}\n  Missing Notes: ${result.metrics.missing_notes}`);
+            } else {
+                alert(`Error: ${result.message}`);
+            }
+        },
+        error: function() {
+            alert('Failed to assess data quality');
+        }
+    });
+}
+
+function assessSystemDataQuality() {
+    const days = prompt('Analyze last how many days? (default 30):', '30');
+    if (!days || isNaN(days) || days < 1) return;
+    
+    $.ajax({
+        url: `/api/quality/system-overview?days=${days}`,
+        type: 'GET',
+        success: function(result) {
+            if (result.success) {
+                const o = result.system_overview;
+                const m = result.quality_metrics;
+                alert(`🔍 System Data Quality Overview\n\nPeriod: ${result.period_days} days\n\nCoverage:\n  Active Bins: ${o.total_active_bins}\n  Bins with Data: ${o.bins_with_data}\n  Coverage: ${o.data_coverage_percent}%\n\nReading Volume:\n  Total Readings: ${o.total_readings}\n  Avg per Bin: ${o.average_readings_per_bin}\n\nQuality Issues:\n  Anomalies: ${m.anomalies_detected}\n  Duplicates: ${m.duplicate_readings}\n  Anomaly Rate: ${m.anomaly_rate_percent}%\n\nData Health: ${result.data_health}`);
+            } else {
+                alert(`Error: ${result.message}`);
+            }
+        },
+        error: function() {
+            alert('Failed to get system quality overview');
+        }
+    });
+}
+
+function identifyPoorQualityBins() {
+    const threshold = prompt('Quality threshold (0-100, default 70):', '70');
+    if (threshold === null || isNaN(threshold)) return;
+    
+    const days = prompt('Analyze last how many days? (default 30):', '30');
+    if (!days || isNaN(days)) return;
+    
+    $.ajax({
+        url: `/api/quality/low-quality-bins?threshold=${threshold}&days=${days}`,
+        type: 'GET',
+        success: function(result) {
+            if (result.success) {
+                if (result.low_quality_bins.length === 0) {
+                    alert(`✓ All bins meet quality threshold of ${result.quality_threshold}%`);
+                    return;
+                }
+                
+                let message = `⚠️ Low Quality Bins (${result.total_identified})\nThreshold: ${result.quality_threshold}%\n\n`;
+                result.low_quality_bins.slice(0, 10).forEach((bin, idx) => {
+                    message += `${idx + 1}. Bin ${bin.bin_id} - ${bin.location}\n   Zone: ${bin.zone}\n   Quality Score: ${bin.quality_score}%\n   Status: ${bin.reading_count === 0 ? 'No Data' : `${bin.anomaly_count} anomalies`}\n   Recommendation: ${bin.recommendation}\n\n`;
+                });
+                
+                if (result.total_identified > 10) {
+                    message += `... and ${result.total_identified - 10} more bins`;
+                }
+                
+                alert(message);
+            } else {
+                alert(`Error: ${result.message}`);
+            }
+        },
+        error: function() {
+            alert('Failed to identify low quality bins');
         }
     });
 }
