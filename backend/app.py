@@ -40,6 +40,7 @@ from environmental_impact import EnvironmentalImpactService
 from citizen_engagement import CitizenEngagementService
 from resource_utilization import ResourceUtilizationService
 from data_quality import DataQualityService
+from predictive_analytics import PredictiveAnalyticsService
 
 # Load environment variables
 load_dotenv()
@@ -1991,6 +1992,74 @@ def api_identify_low_quality_bins():
         return jsonify({'success': False, 'error': str(e)}), 500
 
 
+# =============================================
+# PREDICTIVE ANALYTICS & FORECASTING ROUTES
+# =============================================
+
+@app.route('/api/bins/<int:bin_id>/forecast/overflow', methods=['GET'])
+@login_required
+def forecast_bin_overflow(bin_id):
+    """Forecast when a bin will overflow based on historical patterns"""
+    try:
+        days_ahead = request.args.get('days', 7, type=int)
+        if days_ahead < 1 or days_ahead > 30:
+            return jsonify({'success': False, 'message': 'Days must be between 1 and 30'}), 400
+        
+        result = PredictiveAnalyticsService().forecast_bin_overflow(bin_id, days_ahead)
+        return jsonify(result), (200 if result.get('success') else 400)
+    
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+@app.route('/api/zones/<zone>/forecast/demand', methods=['GET'])
+@login_required
+def predict_collection_demand(zone):
+    """Predict collection demand for a zone"""
+    try:
+        days_ahead = request.args.get('days', 7, type=int)
+        if days_ahead < 1 or days_ahead > 30:
+            return jsonify({'success': False, 'message': 'Days must be between 1 and 30'}), 400
+        
+        result = PredictiveAnalyticsService().predict_collection_demand(zone, days_ahead)
+        return jsonify(result), (200 if result.get('success') else 400)
+    
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+@app.route('/api/forecast/waste-volume', methods=['GET'])
+@login_required
+def forecast_waste_volume():
+    """Forecast total system waste volume"""
+    try:
+        days_ahead = request.args.get('days', 30, type=int)
+        if days_ahead < 1 or days_ahead > 90:
+            return jsonify({'success': False, 'message': 'Days must be between 1 and 90'}), 400
+        
+        result = PredictiveAnalyticsService().forecast_waste_volume(days_ahead)
+        return jsonify(result), (200 if result.get('success') else 400)
+    
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+@app.route('/api/bins/<int:bin_id>/anomalies', methods=['GET'])
+@login_required
+def identify_anomalies(bin_id):
+    """Identify anomalies in bin fill level patterns"""
+    try:
+        sensitivity = request.args.get('sensitivity', 2.0, type=float)
+        if sensitivity < 0.5 or sensitivity > 5.0:
+            return jsonify({'success': False, 'message': 'Sensitivity must be between 0.5 and 5.0'}), 400
+        
+        result = PredictiveAnalyticsService().identify_anomalies(bin_id, sensitivity)
+        return jsonify(result), (200 if result.get('success') else 400)
+    
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+        
 # =============================================
 # ERROR HANDLERS
 # =============================================
