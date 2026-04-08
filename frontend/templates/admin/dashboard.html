@@ -236,6 +236,34 @@
         </div>
     </div>
 
+    <!-- Predictive Analytics Section -->
+    <div class="row g-3 mb-4">
+        <div class="col-12">
+            <div class="card border-primary">
+                <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0"><i class="bi bi-crystal-ball"></i> Predictive Analytics & Forecasting</h5>
+                    <div>
+                        <button class="btn btn-sm btn-light" onclick="showOverflowForecast()">
+                            <i class="bi bi-exclamation-circle"></i> Overflow Forecast
+                        </button>
+                        <button class="btn btn-sm btn-light" onclick="showDemandForecast()">
+                            <i class="bi bi-graph-up"></i> Demand Forecast
+                        </button>
+                        <button class="btn btn-sm btn-light" onclick="showVolumeForecast()">
+                            <i class="bi bi-bar-chart"></i> Volume Forecast
+                        </button>
+                        <button class="btn btn-sm btn-light" onclick="showAnomalyDetection()">
+                            <i class="bi bi-pin"></i> Anomaly Detection
+                        </button>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <p class="text-muted"><i class="bi bi-info-circle"></i> Advanced forecasting tools to predict collection demand, identify overflow risks, and detect anomalies in system patterns.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- Data Quality Assessment Section -->
     <div class="row g-3 mb-4">
         <div class="col-12">
@@ -746,6 +774,245 @@ function identifyPoorQualityBins() {
         },
         error: function() {
             alert('Failed to identify low quality bins');
+        }
+    });
+}
+
+// Predictive Analytics Functions
+
+function showOverflowForecast() {
+    const binId = prompt('Enter Bin ID:', '1');
+    if (!binId || isNaN(binId)) return;
+    
+    const days = prompt('Forecast days ahead (1-30):', '7');
+    if (!days || isNaN(days) || days < 1 || days > 30) return;
+    
+    $.ajax({
+        url: `/api/bins/${binId}/forecast/overflow?days=${days}`,
+        type: 'GET',
+        success: function(result) {
+            if (result.success) {
+                const html = `
+                    <div class="row">
+                        <div class="col-md-6">
+                            <p><strong>Current Fill Level:</strong> ${result.current_fill_level}%</p>
+                            <p><strong>Threshold Level:</strong> ${result.threshold_level}%</p>
+                            <p><strong>Days to Overflow:</strong> ${result.days_to_overflow}</p>
+                        </div>
+                        <div class="col-md-6">
+                            <p><strong>Overflow Status:</strong> <span class="badge bg-${result.overflow_status === 'Critical' ? 'danger' : result.overflow_status === 'Warning' ? 'warning' : 'success'}">${result.overflow_status}</span></p>
+                            <p><strong>Confidence:</strong> ${result.confidence_percent}%</p>
+                            <p><strong>Recommendation:</strong> ${result.recommendation}</p>
+                        </div>
+                    </div>
+                `;
+                
+                const modal = `
+                    <div class="modal fade" id="overflowModal" tabindex="-1">
+                        <div class="modal-dialog modal-lg">
+                            <div class="modal-content">
+                                <div class="modal-header bg-primary text-white">
+                                    <h5 class="modal-title">Bin ${result.bin_id} Overflow Forecast</h5>
+                                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                                </div>
+                                <div class="modal-body">
+                                    ${html}
+                                </div>
+                                <div class="modal-footer">
+                                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+                $('body').append(modal);
+                new bootstrap.Modal(document.getElementById('overflowModal')).show();
+            } else {
+                alert(`Error: ${result.message}`);
+            }
+        },
+        error: function() {
+            alert('Failed to fetch overflow forecast');
+        }
+    });
+}
+
+function showDemandForecast() {
+    const zone = prompt('Enter Zone Name:', 'Zone A');
+    if (!zone) return;
+    
+    const days = prompt('Forecast days ahead (1-30):', '7');
+    if (!days || isNaN(days) || days < 1 || days > 30) return;
+    
+    $.ajax({
+        url: `/api/zones/${zone}/forecast/demand?days=${days}`,
+        type: 'GET',
+        success: function(result) {
+            if (result.success) {
+                const html = `
+                    <div class="row">
+                        <div class="col-md-6">
+                            <p><strong>Zone:</strong> ${result.zone}</p>
+                            <p><strong>Forecast Period:</strong> ${result.forecast_period_days} days</p>
+                            <p><strong>Predicted Collections:</strong> ${result.predicted_collections}</p>
+                        </div>
+                        <div class="col-md-6">
+                            <p><strong>Average Daily:</strong> ${result.average_daily_collections}</p>
+                            <p><strong>Trend:</strong> <span class="badge bg-${result.trend === 'increasing' ? 'danger' : result.trend === 'decreasing' ? 'info' : 'success'}">${result.trend.toUpperCase()}</span></p>
+                            <p><strong>Recommendation:</strong> ${result.resource_recommendation}</p>
+                        </div>
+                    </div>
+                `;
+                
+                const modal = `
+                    <div class="modal fade" id="demandModal" tabindex="-1">
+                        <div class="modal-dialog modal-lg">
+                            <div class="modal-content">
+                                <div class="modal-header bg-primary text-white">
+                                    <h5 class="modal-title">Demand Forecast - ${result.zone}</h5>
+                                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                                </div>
+                                <div class="modal-body">
+                                    ${html}
+                                </div>
+                                <div class="modal-footer">
+                                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+                $('body').append(modal);
+                new bootstrap.Modal(document.getElementById('demandModal')).show();
+            } else {
+                alert(`Error: ${result.message}`);
+            }
+        },
+        error: function() {
+            alert('Failed to fetch demand forecast');
+        }
+    });
+}
+
+function showVolumeForecast() {
+    const days = prompt('Forecast days ahead (1-90):', '30');
+    if (!days || isNaN(days) || days < 1 || days > 90) return;
+    
+    $.ajax({
+        url: `/api/forecast/waste-volume?days=${days}`,
+        type: 'GET',
+        success: function(result) {
+            if (result.success) {
+                const html = `
+                    <div class="row">
+                        <div class="col-md-6">
+                            <p><strong>Forecast Period:</strong> ${result.forecast_period_days} days</p>
+                            <p><strong>Average Daily Volume:</strong> ${result.average_daily_volume} units</p>
+                        </div>
+                        <div class="col-md-6">
+                            <p><strong>Growth Trend:</strong> ${result.recent_trend_growth_percent}%</p>
+                            <p><strong>Forecasted Total:</strong> ${result.forecasted_total_volume} units</p>
+                            <p><strong>Recommendation:</strong> ${result.resource_capacity_recommendation}</p>
+                        </div>
+                    </div>
+                `;
+                
+                const modal = `
+                    <div class="modal fade" id="volumeModal" tabindex="-1">
+                        <div class="modal-dialog modal-lg">
+                            <div class="modal-content">
+                                <div class="modal-header bg-primary text-white">
+                                    <h5 class="modal-title">Waste Volume Forecast</h5>
+                                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                                </div>
+                                <div class="modal-body">
+                                    ${html}
+                                </div>
+                                <div class="modal-footer">
+                                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+                $('body').append(modal);
+                new bootstrap.Modal(document.getElementById('volumeModal')).show();
+            } else {
+                alert(`Error: ${result.message}`);
+            }
+        },
+        error: function() {
+            alert('Failed to fetch volume forecast');
+        }
+    });
+}
+
+function showAnomalyDetection() {
+    const binId = prompt('Enter Bin ID:', '1');
+    if (!binId || isNaN(binId)) return;
+    
+    const sensitivity = prompt('Sensitivity (0.5-5.0, higher = less sensitive):', '2.0');
+    if (!sensitivity || isNaN(sensitivity) || sensitivity < 0.5 || sensitivity > 5.0) return;
+    
+    $.ajax({
+        url: `/api/bins/${binId}/anomalies?sensitivity=${sensitivity}`,
+        type: 'GET',
+        success: function(result) {
+            if (result.success) {
+                let anomaliesHtml = '<p class="text-muted">No anomalies detected</p>';
+                if (result.anomalies.length > 0) {
+                    anomaliesHtml = '<div class="list-group">';
+                    result.anomalies.forEach((anom, idx) => {
+                        const badgeClass = anom.type === 'unusually_high' ? 'danger' : 'warning';
+                        anomaliesHtml += `
+                            <div class="list-group-item">
+                                <div class="d-flex w-100 justify-content-between">
+                                    <h6 class="mb-1">Anomaly ${idx + 1}</h6>
+                                    <span class="badge bg-${badgeClass}">${anom.type.replace('_', ' ').toUpperCase()}</span>
+                                </div>
+                                <p class="mb-1"><strong>Fill Level:</strong> ${anom.fill_level}%</p>
+                                <small><strong>Deviation:</strong> ${anom.deviation_percent}% | <strong>Time:</strong> ${anom.timestamp}</small>
+                            </div>
+                        `;
+                    });
+                    anomaliesHtml += '</div>';
+                }
+                
+                const html = `
+                    <p><strong>Baseline Level:</strong> ${result.baseline_level}%</p>
+                    <p><strong>Anomalies Detected:</strong> ${result.anomalies_detected}</p>
+                    <p><strong>Investigation Recommended:</strong> ${result.investigation_recommended ? '✓ Yes' : '✗ No'}</p>
+                    <hr>
+                    <h6>Detected Anomalies:</h6>
+                    ${anomaliesHtml}
+                `;
+                
+                const modal = `
+                    <div class="modal fade" id="anomalyModal" tabindex="-1">
+                        <div class="modal-dialog modal-lg">
+                            <div class="modal-content">
+                                <div class="modal-header bg-primary text-white">
+                                    <h5 class="modal-title">Anomaly Detection - Bin ${result.bin_id}</h5>
+                                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                                </div>
+                                <div class="modal-body">
+                                    ${html}
+                                </div>
+                                <div class="modal-footer">
+                                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+                $('body').append(modal);
+                new bootstrap.Modal(document.getElementById('anomalyModal')).show();
+            } else {
+                alert(`Error: ${result.message}`);
+            }
+        },
+        error: function() {
+            alert('Failed to detect anomalies');
         }
     });
 }
