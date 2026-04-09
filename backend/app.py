@@ -41,6 +41,7 @@ from citizen_engagement import CitizenEngagementService
 from resource_utilization import ResourceUtilizationService
 from data_quality import DataQualityService
 from predictive_analytics import PredictiveAnalyticsService
+from real_time_alerts import RealTimeAlertsService
 
 # Load environment variables
 load_dotenv()
@@ -2054,6 +2055,137 @@ def identify_anomalies(bin_id):
             return jsonify({'success': False, 'message': 'Sensitivity must be between 0.5 and 5.0'}), 400
         
         result = PredictiveAnalyticsService().identify_anomalies(bin_id, sensitivity)
+        return jsonify(result), (200 if result.get('success') else 400)
+    
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+# =============================================
+# REAL-TIME MONITORING & ALERTS
+# =============================================
+
+@app.route('/api/alerts/create', methods=['POST'])
+@login_required
+def create_alert():
+    """Create a new alert"""
+    try:
+        data = request.get_json() or {}
+        alert_type = data.get('alert_type')
+        severity = data.get('severity')
+        message = data.get('message')
+        entity_id = data.get('entity_id')
+        entity_type = data.get('entity_type')
+        
+        if not all([alert_type, severity, message]):
+            return jsonify({'success': False, 'message': 'Missing required fields'}), 400
+        
+        if severity not in ['Critical', 'High', 'Medium', 'Low']:
+            return jsonify({'success': False, 'message': 'Invalid severity level'}), 400
+        
+        result = RealTimeAlertsService().create_alert(alert_type, severity, message, entity_id, entity_type)
+        return jsonify(result), (201 if result.get('success') else 400)
+    
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+@app.route('/api/alerts/active', methods=['GET'])
+@login_required
+def get_active_alerts():
+    """Get all active alerts with optional filtering"""
+    try:
+        severity = request.args.get('severity')
+        alert_type = request.args.get('type')
+        limit = int(request.args.get('limit', 100))
+        
+        result = RealTimeAlertsService().get_active_alerts(severity, alert_type, limit)
+        return jsonify(result), (200 if result.get('success') else 400)
+    
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+@app.route('/api/alerts/summary', methods=['GET'])
+@login_required
+def get_alert_summary():
+    """Get alert summary statistics"""
+    try:
+        result = RealTimeAlertsService().get_alert_summary()
+        return jsonify(result), (200 if result.get('success') else 400)
+    
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+@app.route('/api/alerts/<int:alert_id>/acknowledge', methods=['POST'])
+@login_required
+def acknowledge_alert(alert_id):
+    """Acknowledge an alert"""
+    try:
+        data = request.get_json() or {}
+        notes = data.get('notes')
+        
+        result = RealTimeAlertsService().acknowledge_alert(alert_id, notes)
+        return jsonify(result), (200 if result.get('success') else 400)
+    
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+@app.route('/api/alerts/<int:alert_id>/resolve', methods=['POST'])
+@login_required
+def resolve_alert(alert_id):
+    """Resolve an alert"""
+    try:
+        data = request.get_json() or {}
+        resolution_notes = data.get('resolution_notes')
+        
+        result = RealTimeAlertsService().resolve_alert(alert_id, resolution_notes)
+        return jsonify(result), (200 if result.get('success') else 400)
+    
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+@app.route('/api/alerts/history', methods=['GET'])
+@login_required
+def get_alert_history():
+    """Get historical alerts"""
+    try:
+        days = int(request.args.get('days', 30))
+        limit = int(request.args.get('limit', 200))
+        
+        result = RealTimeAlertsService().get_alert_history(days, limit)
+        return jsonify(result), (200 if result.get('success') else 400)
+    
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+@app.route('/api/alerts/entity/<entity_type>/<int:entity_id>', methods=['GET'])
+@login_required
+def get_entity_alerts(entity_type, entity_id):
+    """Get alerts for a specific entity"""
+    try:
+        status = request.args.get('status', 'Active')
+        limit = int(request.args.get('limit', 50))
+        
+        result = RealTimeAlertsService().get_alerts_by_entity(entity_type, entity_id, status, limit)
+        return jsonify(result), (200 if result.get('success') else 400)
+    
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+@app.route('/api/alerts/critical-events', methods=['GET'])
+@login_required
+def get_critical_events():
+    """Get critical and high priority events"""
+    try:
+        hours = int(request.args.get('hours', 24))
+        
+        result = RealTimeAlertsService().get_critical_events(hours)
         return jsonify(result), (200 if result.get('success') else 400)
     
     except Exception as e:
