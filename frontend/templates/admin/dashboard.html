@@ -264,6 +264,34 @@
         </div>
     </div>
 
+    <!-- Real-time Monitoring & Alerts Section -->
+    <div class="row g-3 mb-4">
+        <div class="col-12">
+            <div class="card border-warning">
+                <div class="card-header bg-warning text-dark d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0"><i class="bi bi-exclamation-triangle"></i> Real-time Monitoring & Alerts</h5>
+                    <div>
+                        <button class="btn btn-sm btn-dark" onclick="viewActiveAlerts()">
+                            <i class="bi bi-bell"></i> Active Alerts
+                        </button>
+                        <button class="btn btn-sm btn-dark" onclick="viewCriticalEvents()">
+                            <i class="bi bi-fire"></i> Critical Events
+                        </button>
+                        <button class="btn btn-sm btn-dark" onclick="viewAlertSummary()">
+                            <i class="bi bi-graph-up"></i> Alert Summary
+                        </button>
+                        <button class="btn btn-sm btn-dark" onclick="viewAlertHistory()">
+                            <i class="bi bi-clock-history"></i> History
+                        </button>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <p class="text-muted"><i class="bi bi-info-circle"></i> Monitor critical system events in real-time. View active alerts, critical events, and manage alert lifecycle with acknowledgement and resolution tracking.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- Data Quality Assessment Section -->
     <div class="row g-3 mb-4">
         <div class="col-12">
@@ -1013,6 +1041,314 @@ function showAnomalyDetection() {
         },
         error: function() {
             alert('Failed to detect anomalies');
+        }
+    });
+}
+
+// Real-time Monitoring & Alerts Functions
+
+function viewActiveAlerts() {
+    const severity = prompt('Filter by severity (or leave blank for all):\nCritical, High, Medium, Low', '');
+    
+    $.ajax({
+        url: '/api/alerts/active?limit=100' + (severity ? `&severity=${severity}` : ''),
+        type: 'GET',
+        success: function(result) {
+            if (result.success && result.alerts) {
+                let alertsHtml = '';
+                if (result.alerts.length === 0) {
+                    alertsHtml = '<p class="text-muted">No active alerts found.</p>';
+                } else {
+                    result.alerts.forEach(alert => {
+                        const severityColor = {
+                            'Critical': 'danger',
+                            'High': 'warning',
+                            'Medium': 'info',
+                            'Low': 'success'
+                        }[alert.severity] || 'secondary';
+                        
+                        alertsHtml += `
+                            <div class="alert alert-${severityColor} mb-2">
+                                <div class="d-flex justify-content-between">
+                                    <div>
+                                        <strong>[${alert.severity}] ${alert.alert_type}</strong><br>
+                                        <p class="mb-1">${alert.message}</p>
+                                        <small class="text-muted">Created: ${alert.created_at} | Status: ${alert.status}</small>
+                                    </div>
+                                    <div>
+                                        <button class="btn btn-sm btn-outline-secondary" onclick="acknowledgeAlert(${alert.id})">
+                                            <i class="bi bi-check"></i> Ack
+                                        </button>
+                                        <button class="btn btn-sm btn-outline-success" onclick="resolveAlert(${alert.id})">
+                                            <i class="bi bi-check2"></i> Resolve
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        `;
+                    });
+                }
+                
+                const modal = `
+                    <div class="modal fade" id="activeAlertsModal" tabindex="-1">
+                        <div class="modal-dialog modal-lg">
+                            <div class="modal-content">
+                                <div class="modal-header bg-warning text-dark">
+                                    <h5 class="modal-title"><i class="bi bi-bell"></i> Active Alerts (${result.alert_count})</h5>
+                                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                                </div>
+                                <div class="modal-body">
+                                    ${alertsHtml}
+                                </div>
+                                <div class="modal-footer">
+                                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+                $('body').append(modal);
+                new bootstrap.Modal(document.getElementById('activeAlertsModal')).show();
+            } else {
+                alert(`Error: ${result.message}`);
+            }
+        },
+        error: function() {
+            alert('Failed to retrieve active alerts');
+        }
+    });
+}
+
+function viewCriticalEvents() {
+    const hours = prompt('View critical events from past N hours:', '24');
+    if (!hours || isNaN(hours) || hours < 1) return;
+    
+    $.ajax({
+        url: `/api/alerts/critical-events?hours=${hours}`,
+        type: 'GET',
+        success: function(result) {
+            if (result.success && result.alerts) {
+                let eventsHtml = `
+                    <div class="alert alert-danger mb-3">
+                        <strong>⚠️ Critical Events: ${result.critical_count}</strong> | 
+                        <strong>High Priority: ${result.high_count}</strong>
+                    </div>
+                `;
+                
+                result.alerts.forEach(alert => {
+                    const icon = alert.severity === 'Critical' ? '🔴' : '🟠';
+                    eventsHtml += `
+                        <div class="border-bottom pb-2 mb-2">
+                            <strong>${icon} [${alert.severity}] ${alert.alert_type}</strong><br>
+                            <p class="mb-1">${alert.message}</p>
+                            <small class="text-muted">
+                                Created: ${alert.created_at} | 
+                                Entity: ${alert.related_entity_type} #${alert.related_entity_id}
+                            </small>
+                        </div>
+                    `;
+                });
+                
+                const modal = `
+                    <div class="modal fade" id="criticalEventsModal" tabindex="-1">
+                        <div class="modal-dialog modal-lg">
+                            <div class="modal-content">
+                                <div class="modal-header bg-danger text-white">
+                                    <h5 class="modal-title"><i class="bi bi-fire"></i> Critical Events (Last ${hours}h)</h5>
+                                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                                </div>
+                                <div class="modal-body">
+                                    ${eventsHtml}
+                                </div>
+                                <div class="modal-footer">
+                                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+                $('body').append(modal);
+                new bootstrap.Modal(document.getElementById('criticalEventsModal')).show();
+            } else {
+                alert(`Error: ${result.message}`);
+            }
+        },
+        error: function() {
+            alert('Failed to retrieve critical events');
+        }
+    });
+}
+
+function viewAlertSummary() {
+    $.ajax({
+        url: '/api/alerts/summary',
+        type: 'GET',
+        success: function(result) {
+            if (result.success) {
+                const severityStats = Object.keys(result.by_severity)
+                    .map(severity => `<li>${severity}: ${result.by_severity[severity]}</li>`)
+                    .join('');
+                
+                const typeStats = Object.keys(result.by_type)
+                    .map(type => `<li>${type}: ${result.by_type[type]}</li>`)
+                    .join('');
+                
+                const html = `
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <h6>By Severity:</h6>
+                            <ul class="list-unstyled">
+                                ${severityStats}
+                            </ul>
+                        </div>
+                        <div class="col-md-6">
+                            <h6>By Type:</h6>
+                            <ul class="list-unstyled">
+                                ${typeStats}
+                            </ul>
+                        </div>
+                    </div>
+                    <div class="alert alert-danger">
+                        <strong>⚠️ Requires Immediate Attention:</strong> 
+                        ${result.requires_attention} alert(s) (Critical + High)
+                    </div>
+                `;
+                
+                const modal = `
+                    <div class="modal fade" id="alertSummaryModal" tabindex="-1">
+                        <div class="modal-dialog">
+                            <div class="modal-content">
+                                <div class="modal-header bg-warning text-dark">
+                                    <h5 class="modal-title"><i class="bi bi-graph-up"></i> Alert Summary</h5>
+                                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                                </div>
+                                <div class="modal-body">
+                                    <h5>Total Active Alerts: <span class="badge bg-danger">${result.total_active_alerts}</span></h5>
+                                    <hr>
+                                    ${html}
+                                </div>
+                                <div class="modal-footer">
+                                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+                $('body').append(modal);
+                new bootstrap.Modal(document.getElementById('alertSummaryModal')).show();
+            } else {
+                alert(`Error: ${result.message}`);
+            }
+        },
+        error: function() {
+            alert('Failed to retrieve alert summary');
+        }
+    });
+}
+
+function viewAlertHistory() {
+    const days = prompt('Retrieve alert history from past N days:', '30');
+    if (!days || isNaN(days) || days < 1 || days > 365) return;
+    
+    $.ajax({
+        url: `/api/alerts/history?days=${days}&limit=200`,
+        type: 'GET',
+        success: function(result) {
+            if (result.success && result.alerts) {
+                let historyHtml = '';
+                if (result.alerts.length === 0) {
+                    historyHtml = '<p class="text-muted">No alerts in the specified period.</p>';
+                } else {
+                    result.alerts.forEach(alert => {
+                        const statusBadge = {
+                            'Active': 'danger',
+                            'Acknowledged': 'warning',
+                            'Resolved': 'success'
+                        }[alert.status] || 'secondary';
+                        
+                        historyHtml += `
+                            <div class="border-bottom pb-2 mb-2">
+                                <span class="badge bg-${statusBadge}">${alert.status}</span>
+                                <strong>${alert.alert_type}</strong><br>
+                                <small>${alert.message}</small><br>
+                                <small class="text-muted">Created: ${alert.created_at}</small>
+                            </div>
+                        `;
+                    });
+                }
+                
+                const modal = `
+                    <div class="modal fade" id="alertHistoryModal" tabindex="-1">
+                        <div class="modal-dialog modal-lg">
+                            <div class="modal-content">
+                                <div class="modal-header bg-info text-white">
+                                    <h5 class="modal-title"><i class="bi bi-clock-history"></i> Alert History (${days} days)</h5>
+                                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                                </div>
+                                <div class="modal-body">
+                                    ${historyHtml}
+                                </div>
+                                <div class="modal-footer">
+                                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+                $('body').append(modal);
+                new bootstrap.Modal(document.getElementById('alertHistoryModal')).show();
+            } else {
+                alert(`Error: ${result.message}`);
+            }
+        },
+        error: function() {
+            alert('Failed to retrieve alert history');
+        }
+    });
+}
+
+function acknowledgeAlert(alertId) {
+    const notes = prompt('Enter acknowledgment notes (optional):', '');
+    
+    $.ajax({
+        url: `/api/alerts/${alertId}/acknowledge`,
+        type: 'POST',
+        contentType: 'application/json',
+        data: JSON.stringify({ notes: notes }),
+        success: function(result) {
+            if (result.success) {
+                alert('Alert acknowledged successfully');
+                // Refresh the active alerts modal
+                viewActiveAlerts();
+            } else {
+                alert(`Error: ${result.message}`);
+            }
+        },
+        error: function() {
+            alert('Failed to acknowledge alert');
+        }
+    });
+}
+
+function resolveAlert(alertId) {
+    const resolution = prompt('Enter resolution details:', '');
+    
+    $.ajax({
+        url: `/api/alerts/${alertId}/resolve`,
+        type: 'POST',
+        contentType: 'application/json',
+        data: JSON.stringify({ resolution_notes: resolution }),
+        success: function(result) {
+            if (result.success) {
+                alert('Alert resolved successfully');
+                // Refresh the active alerts modal
+                viewActiveAlerts();
+            } else {
+                alert(`Error: ${result.message}`);
+            }
+        },
+        error: function() {
+            alert('Failed to resolve alert');
         }
     });
 }
