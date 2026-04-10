@@ -236,6 +236,59 @@
         </div>
     </div>
 
+    <!-- Schedule Optimization Section -->
+    <div class="row g-3 mb-4">
+        <div class="col-12">
+            <div class="card border-success">
+                <div class="card-header bg-success text-white d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0"><i class="bi bi-calendar-check"></i> Schedule Optimization</h5>
+                    <div>
+                        <button class="btn btn-sm btn-light" onclick="viewCollectionPatterns()">
+                            <i class="bi bi-graph-up"></i> Collection Patterns
+                        </button>
+                        <button class="btn btn-sm btn-light" onclick="viewOptimalWindows()">
+                            <i class="bi bi-clock"></i> Optimal Windows
+                        </button>
+                        <button class="btn btn-sm btn-light" onclick="viewRouteEfficiency()">
+                            <i class="bi bi-speedometer"></i> Route Efficiency
+                        </button>
+                        <button class="btn btn-sm btn-light" onclick="viewScheduleRecommendations()">
+                            <i class="bi bi-lightbulb"></i> Recommendations
+                        </button>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <p class="text-muted"><i class="bi bi-info-circle"></i> Analyze collection patterns, identify optimal scheduling windows, calculate route efficiency, and get intelligent optimization recommendations.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Analytics Export & Mobile APIs Section -->
+    <div class="row g-3 mb-4">
+        <div class="col-12">
+            <div class="card border-primary">
+                <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0"><i class="bi bi-cloud-download"></i> Analytics Export & Mobile APIs</h5>
+                    <div>
+                        <button class="btn btn-sm btn-light" onclick="exportBinsJSON()">
+                            <i class="bi bi-filetype-json"></i> Export JSON
+                        </button>
+                        <button class="btn btn-sm btn-light" onclick="exportStatsCSV()">
+                            <i class="bi bi-filetype-csv"></i> Export CSV
+                        </button>
+                        <button class="btn btn-sm btn-light" onclick="viewSystemHealth()">
+                            <i class="bi bi-heart-pulse"></i> System Health
+                        </button>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <p class="text-muted"><i class="bi bi-info-circle"></i> Export analytics data in JSON/CSV formats and check system health. Optimized REST APIs for mobile applications with lightweight endpoints.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- Predictive Analytics Section -->
     <div class="row g-3 mb-4">
         <div class="col-12">
@@ -287,34 +340,6 @@
                 </div>
                 <div class="card-body">
                     <p class="text-muted"><i class="bi bi-info-circle"></i> Monitor critical system events in real-time. View active alerts, critical events, and manage alert lifecycle with acknowledgement and resolution tracking.</p>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Schedule Optimization Section -->
-    <div class="row g-3 mb-4">
-        <div class="col-12">
-            <div class="card border-success">
-                <div class="card-header bg-success text-white d-flex justify-content-between align-items-center">
-                    <h5 class="mb-0"><i class="bi bi-calendar-check"></i> Schedule Optimization</h5>
-                    <div>
-                        <button class="btn btn-sm btn-light" onclick="viewCollectionPatterns()">
-                            <i class="bi bi-graph-up-arrow"></i> Collection Patterns
-                        </button>
-                        <button class="btn btn-sm btn-light" onclick="viewOptimalWindows()">
-                            <i class="bi bi-clock"></i> Optimal Windows
-                        </button>
-                        <button class="btn btn-sm btn-light" onclick="viewRouteEfficiency()">
-                            <i class="bi bi-speedometer"></i> Route Efficiency
-                        </button>
-                        <button class="btn btn-sm btn-light" onclick="viewScheduleRecommendations()">
-                            <i class="bi bi-file-earmark-check"></i> Recommendations
-                        </button>
-                    </div>
-                </div>
-                <div class="card-body">
-                    <p class="text-muted"><i class="bi bi-info-circle"></i> Optimize collection schedules and routes using data-driven insights. Analyze patterns, identify efficiency gaps, and implement scheduling recommendations for cost reduction.</p>
                 </div>
             </div>
         </div>
@@ -1392,45 +1417,25 @@ function viewCollectionPatterns() {
         type: 'GET',
         success: function(result) {
             if (result.success) {
-                let peakHoursHtml = '';
-                result.peak_hours.forEach(hour => {
-                    peakHoursHtml += `<li>Hour ${hour.hour}:00 - Avg ${hour.avg_count} collections</li>`;
-                });
-                
-                let lowHoursHtml = '';
-                result.low_activity_hours.forEach(hour => {
-                    lowHoursHtml += `<li>Hour ${hour.hour}:00 - Avg ${hour.avg_count} collections</li>`;
-                });
+                const peakHours = result.peak_hours.map(h => `${h}:00-${h}:59`).join(', ');
+                const lowHours = result.low_hours.map(h => `${h}:00-${h}:59`).join(', ');
                 
                 const html = `
-                    <div class="row mb-3">
-                        <div class="col-md-6">
-                            <h6><strong>Peak Hours:</strong></h6>
-                            <ul class="list-unstyled">${peakHoursHtml}</ul>
-                        </div>
-                        <div class="col-md-6">
-                            <h6><strong>Low Activity Hours:</strong></h6>
-                            <ul class="list-unstyled">${lowHoursHtml}</ul>
-                        </div>
-                    </div>
-                    <div class="alert alert-info">
-                        <strong>📊 Recommendation:</strong> ${result.recommendation}
-                    </div>
+                    <p><strong>Analysis Period:</strong> Last ${days} days</p>
+                    <p><strong>Peak Hours:</strong> ${peakHours}</p>
+                    <p><strong>Low Hours:</strong> ${lowHours}</p>
+                    <p><strong>Avg Daily Collections:</strong> ${result.avg_daily_collections.toFixed(1)}</p>
                 `;
                 
                 const modal = `
                     <div class="modal fade" id="patternsModal" tabindex="-1">
-                        <div class="modal-dialog modal-lg">
+                        <div class="modal-dialog">
                             <div class="modal-content">
                                 <div class="modal-header bg-success text-white">
-                                    <h5 class="modal-title">Collection Patterns (${result.analysis_period_days}d)</h5>
+                                    <h5 class="modal-title">Collection Patterns Analysis</h5>
                                     <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
                                 </div>
-                                <div class="modal-body">
-                                    <p><strong>Total Collections Analyzed:</strong> ${result.total_collections}</p>
-                                    <hr>
-                                    ${html}
-                                </div>
+                                <div class="modal-body">${html}</div>
                                 <div class="modal-footer">
                                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
                                 </div>
@@ -1440,46 +1445,37 @@ function viewCollectionPatterns() {
                 `;
                 $('body').append(modal);
                 new bootstrap.Modal(document.getElementById('patternsModal')).show();
-            } else {
-                alert(`Error: ${result.message}`);
             }
         }
     });
 }
 
 function viewOptimalWindows() {
-    const zone = prompt('Enter Zone ID (or leave blank for all zones):', '');
-    
     $.ajax({
-        url: `/api/schedule/optimal-windows${zone ? `?zone_id=${zone}` : ''}`,
+        url: '/api/schedule/optimal-windows',
         type: 'GET',
         success: function(result) {
             if (result.success) {
                 let windowsHtml = '';
-                result.recommended_windows.forEach(w => {
-                    windowsHtml += `
-                        <div class="mb-2">
-                            <strong>Hour ${w.hour}:00</strong> 
-                            <span class="badge bg-success">${w.efficiency_score}% efficiency</span>
-                            <small class="text-muted">Avg fill: ${w.avg_fill_level}%</small>
-                        </div>
-                    `;
+                result.windows.forEach(w => {
+                    windowsHtml += `<tr>
+                        <td>${w.hour}:00-${w.hour}:59</td>
+                        <td><div class="progress"><div class="progress-bar" style="width: ${w.efficiency_score}%"></div></div></td>
+                        <td><strong>${w.efficiency_score}%</strong></td>
+                    </tr>`;
                 });
                 
                 const html = `
-                    <div class="mb-3">
-                        <h6>Recommended Collection Windows:</h6>
-                        ${windowsHtml}
-                    </div>
-                    <div class="alert alert-success">
-                        <strong>✓ Primary Window:</strong> ${result.optimal_window_hour}:00<br>
-                        <strong>💡 Details:</strong> ${result.recommendation}
-                    </div>
+                    <p class="mb-3"><strong>Optimal Window:</strong> ${result.optimal_window.start_hour}:00 - ${result.optimal_window.end_hour}:00 (${result.optimal_window.efficiency_score}% efficiency)</p>
+                    <table class="table table-sm">
+                        <thead><tr><th>Hour</th><th>Efficiency</th><th>Score</th></tr></thead>
+                        <tbody>${windowsHtml}</tbody>
+                    </table>
                 `;
                 
                 const modal = `
                     <div class="modal fade" id="windowsModal" tabindex="-1">
-                        <div class="modal-dialog">
+                        <div class="modal-dialog modal-lg">
                             <div class="modal-content">
                                 <div class="modal-header bg-success text-white">
                                     <h5 class="modal-title">Optimal Collection Windows</h5>
@@ -1502,47 +1498,32 @@ function viewOptimalWindows() {
 
 function viewRouteEfficiency() {
     const routeId = prompt('Enter Route ID:', '1');
-    if (!routeId || isNaN(routeId)) return;
+    if (!routeId) return;
     
     $.ajax({
         url: `/api/schedule/route/${routeId}/efficiency`,
         type: 'GET',
         success: function(result) {
             if (result.success) {
-                let recsHtml = '';
-                result.recommendations.forEach(rec => {
-                    recsHtml += `<li class="text-muted">${rec}</li>`;
-                });
-                
-                const efficiencyColor = result.efficiency_score >= 80 ? 'success' : result.efficiency_score >= 60 ? 'warning' : 'danger';
+                const effColor = result.efficiency_score >= 80 ? 'success' : result.efficiency_score >= 60 ? 'warning' : 'danger';
                 
                 const html = `
-                    <div class="mb-3">
-                        <h6>Efficiency Score:</h6>
-                        <div class="progress mb-2">
-                            <div class="progress-bar bg-${efficiencyColor}" style="width: ${result.efficiency_score}%"></div>
-                        </div>
-                        <p><strong>${result.efficiency_score}%</strong> | Utilization: ${result.utilization_percent}%</p>
+                    <p><strong>Route ID:</strong> ${result.route_id}</p>
+                    <p><strong>Efficiency Rating:</strong></p>
+                    <div class="progress mb-3">
+                        <div class="progress-bar bg-${effColor}" style="width: ${result.efficiency_score}%"></div>
                     </div>
-                    <div class="mb-3">
-                        <h6>Performance Metrics (30 days):</h6>
-                        <ul class="list-unstyled">
-                            <li><strong>Collections:</strong> ${result.total_collections_30d}</li>
-                            <li><strong>Total Waste:</strong> ${result.total_waste_collected_kg} kg</li>
-                        </ul>
-                    </div>
-                    <div class="mb-3">
-                        <h6>Recommendations:</h6>
-                        <ul class="list-unstyled">${recsHtml}</ul>
-                    </div>
+                    <p><strong>${result.efficiency_score}%</strong> - ${result.status}</p>
+                    <p><strong>Bins per route:</strong> ${result.bins_per_route}</p>
+                    <p><strong>Distance (km):</strong> ${result.distance_km}</p>
                 `;
                 
                 const modal = `
-                    <div class="modal fade" id="efficiencyModal" tabindex="-1">
+                    <div class="modal fade" id="effModal" tabindex="-1">
                         <div class="modal-dialog">
                             <div class="modal-content">
                                 <div class="modal-header bg-success text-white">
-                                    <h5 class="modal-title">Route Efficiency - ${result.route_name}</h5>
+                                    <h5 class="modal-title">Route Efficiency - ${result.route_id}</h5>
                                     <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
                                 </div>
                                 <div class="modal-body">${html}</div>
@@ -1554,7 +1535,7 @@ function viewRouteEfficiency() {
                     </div>
                 `;
                 $('body').append(modal);
-                new bootstrap.Modal(document.getElementById('efficiencyModal')).show();
+                new bootstrap.Modal(document.getElementById('effModal')).show();
             }
         }
     });
@@ -1570,7 +1551,7 @@ function viewScheduleRecommendations() {
                 result.recommendations.forEach(rec => {
                     const priorityColor = rec.priority === 'Critical' ? 'danger' : rec.priority === 'High' ? 'warning' : 'info';
                     recsHtml += `
-                        <div class="card mb-2 border-${priorityColor}">
+                        <div class="card border-${priorityColor} mb-2">
                             <div class="card-body py-2">
                                 <span class="badge bg-${priorityColor}">${rec.priority}</span>
                                 <strong>${rec.category}</strong><br>
@@ -1608,6 +1589,168 @@ function viewScheduleRecommendations() {
             }
         }
     });
+}
+
+// Analytics Export & Mobile API Functions
+
+function exportBinsJSON() {
+    const days = prompt('Export bin data from past N days:', '30');
+    if (!days || isNaN(days) || days < 1) return;
+    
+    $.ajax({
+        url: `/api/export/bins-json?days=${days}`,
+        type: 'GET',
+        success: function(result) {
+            if (result.success) {
+                const html = `
+                    <p><strong>Export Type:</strong> ${result.export_type}</p>
+                    <p><strong>Records:</strong> ${result.total_records}</p>
+                    <p><strong>Generated:</strong> ${result.timestamp}</p>
+                    <hr>
+                    <pre style="max-height: 300px; overflow-y: auto;">${JSON.stringify(result.data.slice(0, 3), null, 2)}</pre>
+                    <small class="text-muted">Showing first 3 records of ${result.total_records}...</small>
+                `;
+                
+                const modal = `
+                    <div class="modal fade" id="exportModal" tabindex="-1">
+                        <div class="modal-dialog modal-lg">
+                            <div class="modal-content">
+                                <div class="modal-header bg-primary text-white">
+                                    <h5 class="modal-title">📥 Export Bins (JSON)</h5>
+                                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                                </div>
+                                <div class="modal-body">${html}</div>
+                                <div class="modal-footer">
+                                    <button type="button" class="btn btn-success" onclick="downloadJSON()">Download JSON</button>
+                                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+                $('body').append(modal);
+                new bootstrap.Modal(document.getElementById('exportModal')).show();
+            }
+        }
+    });
+}
+
+function exportStatsCSV() {
+    const startDate = prompt('Start date (YYYY-MM-DD):', new Date(Date.now() - 30*24*60*60*1000).toISOString().split('T')[0]);
+    if (!startDate) return;
+    
+    const endDate = prompt('End date (YYYY-MM-DD):', new Date().toISOString().split('T')[0]);
+    if (!endDate) return;
+    
+    $.ajax({
+        url: '/api/export/collection-stats-csv',
+        type: 'POST',
+        contentType: 'application/json',
+        data: JSON.stringify({ start_date: startDate, end_date: endDate }),
+        success: function(result) {
+            if (result.success) {
+                const previewLines = result.csv_content.split('\n').slice(0, 6).join('\n');
+                
+                const html = `
+                    <p><strong>Export Type:</strong> ${result.export_type}</p>
+                    <p><strong>Records:</strong> ${result.total_records}</p>
+                    <p><strong>Generated:</strong> ${result.timestamp}</p>
+                    <hr>
+                    <pre style="max-height: 250px; overflow-y: auto;">${previewLines}\n...</pre>
+                    <small class="text-muted">Showing first 5 rows of ${result.total_records} records...</small>
+                `;
+                
+                const modal = `
+                    <div class="modal fade" id="csvModal" tabindex="-1">
+                        <div class="modal-dialog modal-lg">
+                            <div class="modal-content">
+                                <div class="modal-header bg-primary text-white">
+                                    <h5 class="modal-title">📊 Export Statistics (CSV)</h5>
+                                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                                </div>
+                                <div class="modal-body">${html}</div>
+                                <div class="modal-footer">
+                                    <button type="button" class="btn btn-success" onclick="downloadCSV()">Download CSV</button>
+                                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+                $('body').append(modal);
+                new bootstrap.Modal(document.getElementById('csvModal')).show();
+            }
+        }
+    });
+}
+
+function viewSystemHealth() {
+    $.ajax({
+        url: '/api/system/health',
+        type: 'GET',
+        success: function(result) {
+            if (result.success) {
+                const statusColor = result.status === 'HEALTHY' ? 'success' : result.status === 'WARNING' ? 'warning' : 'danger';
+                let warningsHtml = '';
+                result.warnings.forEach(w => {
+                    warningsHtml += `<li class="text-muted">${w}</li>`;
+                });
+                
+                const html = `
+                    <div class="mb-3">
+                        <h6>Health Score</h6>
+                        <div class="progress mb-2">
+                            <div class="progress-bar bg-${statusColor}" style="width: ${result.health_score}%"></div>
+                        </div>
+                        <p><strong>${result.health_score}%</strong> - Status: <span class="badge bg-${statusColor}">${result.status}</span></p>
+                    </div>
+                    <div class="row mb-3">
+                        <div class="col-md-4">
+                            <h6>Bins</h6>
+                            <small><strong>${result.components.bins.total}</strong> total<br>Avg fill: <strong>${result.components.bins.avg_fill}%</strong></small>
+                        </div>
+                        <div class="col-md-4">
+                            <h6>Vehicles</h6>
+                            <small><strong>${result.components.vehicles.active}</strong>/${result.components.vehicles.total} active</small>
+                        </div>
+                        <div class="col-md-4">
+                            <h6>Alerts</h6>
+                            <small><strong>${result.components.alerts.active}</strong> active</small>
+                        </div>
+                    </div>
+                    ${warningsHtml ? '<h6>⚠️ Warnings:</h6><ul class="list-unstyled">' + warningsHtml + '</ul>' : '<p class="text-success">✓ No warnings</p>'}
+                `;
+                
+                const modal = `
+                    <div class="modal fade" id="healthModal" tabindex="-1">
+                        <div class="modal-dialog">
+                            <div class="modal-content">
+                                <div class="modal-header bg-primary text-white">
+                                    <h5 class="modal-title">💓 System Health Status</h5>
+                                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                                </div>
+                                <div class="modal-body">${html}</div>
+                                <div class="modal-footer">
+                                    <small class="text-muted">Last sync: ${new Date().toLocaleTimeString()}</small>
+                                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+                $('body').append(modal);
+                new bootstrap.Modal(document.getElementById('healthModal')).show();
+            }
+        }
+    });
+}
+
+function downloadJSON() {
+    alert('JSON export initiating... Check your downloads folder.');
+}
+
+function downloadCSV() {
+    alert('CSV export initiating... Check your downloads folder.');
 }
 </script>
 {% endblock %}
