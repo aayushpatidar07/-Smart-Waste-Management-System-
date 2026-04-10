@@ -292,6 +292,34 @@
         </div>
     </div>
 
+    <!-- Schedule Optimization Section -->
+    <div class="row g-3 mb-4">
+        <div class="col-12">
+            <div class="card border-success">
+                <div class="card-header bg-success text-white d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0"><i class="bi bi-calendar-check"></i> Schedule Optimization</h5>
+                    <div>
+                        <button class="btn btn-sm btn-light" onclick="viewCollectionPatterns()">
+                            <i class="bi bi-graph-up-arrow"></i> Collection Patterns
+                        </button>
+                        <button class="btn btn-sm btn-light" onclick="viewOptimalWindows()">
+                            <i class="bi bi-clock"></i> Optimal Windows
+                        </button>
+                        <button class="btn btn-sm btn-light" onclick="viewRouteEfficiency()">
+                            <i class="bi bi-speedometer"></i> Route Efficiency
+                        </button>
+                        <button class="btn btn-sm btn-light" onclick="viewScheduleRecommendations()">
+                            <i class="bi bi-file-earmark-check"></i> Recommendations
+                        </button>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <p class="text-muted"><i class="bi bi-info-circle"></i> Optimize collection schedules and routes using data-driven insights. Analyze patterns, identify efficiency gaps, and implement scheduling recommendations for cost reduction.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- Data Quality Assessment Section -->
     <div class="row g-3 mb-4">
         <div class="col-12">
@@ -1349,6 +1377,235 @@ function resolveAlert(alertId) {
         },
         error: function() {
             alert('Failed to resolve alert');
+        }
+    });
+}
+
+// Schedule Optimization Functions
+
+function viewCollectionPatterns() {
+    const days = prompt('Analyze collection patterns for past N days:', '30');
+    if (!days || isNaN(days) || days < 1 || days > 365) return;
+    
+    $.ajax({
+        url: `/api/schedule/collection-patterns?days=${days}`,
+        type: 'GET',
+        success: function(result) {
+            if (result.success) {
+                let peakHoursHtml = '';
+                result.peak_hours.forEach(hour => {
+                    peakHoursHtml += `<li>Hour ${hour.hour}:00 - Avg ${hour.avg_count} collections</li>`;
+                });
+                
+                let lowHoursHtml = '';
+                result.low_activity_hours.forEach(hour => {
+                    lowHoursHtml += `<li>Hour ${hour.hour}:00 - Avg ${hour.avg_count} collections</li>`;
+                });
+                
+                const html = `
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <h6><strong>Peak Hours:</strong></h6>
+                            <ul class="list-unstyled">${peakHoursHtml}</ul>
+                        </div>
+                        <div class="col-md-6">
+                            <h6><strong>Low Activity Hours:</strong></h6>
+                            <ul class="list-unstyled">${lowHoursHtml}</ul>
+                        </div>
+                    </div>
+                    <div class="alert alert-info">
+                        <strong>📊 Recommendation:</strong> ${result.recommendation}
+                    </div>
+                `;
+                
+                const modal = `
+                    <div class="modal fade" id="patternsModal" tabindex="-1">
+                        <div class="modal-dialog modal-lg">
+                            <div class="modal-content">
+                                <div class="modal-header bg-success text-white">
+                                    <h5 class="modal-title">Collection Patterns (${result.analysis_period_days}d)</h5>
+                                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                                </div>
+                                <div class="modal-body">
+                                    <p><strong>Total Collections Analyzed:</strong> ${result.total_collections}</p>
+                                    <hr>
+                                    ${html}
+                                </div>
+                                <div class="modal-footer">
+                                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+                $('body').append(modal);
+                new bootstrap.Modal(document.getElementById('patternsModal')).show();
+            } else {
+                alert(`Error: ${result.message}`);
+            }
+        }
+    });
+}
+
+function viewOptimalWindows() {
+    const zone = prompt('Enter Zone ID (or leave blank for all zones):', '');
+    
+    $.ajax({
+        url: `/api/schedule/optimal-windows${zone ? `?zone_id=${zone}` : ''}`,
+        type: 'GET',
+        success: function(result) {
+            if (result.success) {
+                let windowsHtml = '';
+                result.recommended_windows.forEach(w => {
+                    windowsHtml += `
+                        <div class="mb-2">
+                            <strong>Hour ${w.hour}:00</strong> 
+                            <span class="badge bg-success">${w.efficiency_score}% efficiency</span>
+                            <small class="text-muted">Avg fill: ${w.avg_fill_level}%</small>
+                        </div>
+                    `;
+                });
+                
+                const html = `
+                    <div class="mb-3">
+                        <h6>Recommended Collection Windows:</h6>
+                        ${windowsHtml}
+                    </div>
+                    <div class="alert alert-success">
+                        <strong>✓ Primary Window:</strong> ${result.optimal_window_hour}:00<br>
+                        <strong>💡 Details:</strong> ${result.recommendation}
+                    </div>
+                `;
+                
+                const modal = `
+                    <div class="modal fade" id="windowsModal" tabindex="-1">
+                        <div class="modal-dialog">
+                            <div class="modal-content">
+                                <div class="modal-header bg-success text-white">
+                                    <h5 class="modal-title">Optimal Collection Windows</h5>
+                                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                                </div>
+                                <div class="modal-body">${html}</div>
+                                <div class="modal-footer">
+                                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+                $('body').append(modal);
+                new bootstrap.Modal(document.getElementById('windowsModal')).show();
+            }
+        }
+    });
+}
+
+function viewRouteEfficiency() {
+    const routeId = prompt('Enter Route ID:', '1');
+    if (!routeId || isNaN(routeId)) return;
+    
+    $.ajax({
+        url: `/api/schedule/route/${routeId}/efficiency`,
+        type: 'GET',
+        success: function(result) {
+            if (result.success) {
+                let recsHtml = '';
+                result.recommendations.forEach(rec => {
+                    recsHtml += `<li class="text-muted">${rec}</li>`;
+                });
+                
+                const efficiencyColor = result.efficiency_score >= 80 ? 'success' : result.efficiency_score >= 60 ? 'warning' : 'danger';
+                
+                const html = `
+                    <div class="mb-3">
+                        <h6>Efficiency Score:</h6>
+                        <div class="progress mb-2">
+                            <div class="progress-bar bg-${efficiencyColor}" style="width: ${result.efficiency_score}%"></div>
+                        </div>
+                        <p><strong>${result.efficiency_score}%</strong> | Utilization: ${result.utilization_percent}%</p>
+                    </div>
+                    <div class="mb-3">
+                        <h6>Performance Metrics (30 days):</h6>
+                        <ul class="list-unstyled">
+                            <li><strong>Collections:</strong> ${result.total_collections_30d}</li>
+                            <li><strong>Total Waste:</strong> ${result.total_waste_collected_kg} kg</li>
+                        </ul>
+                    </div>
+                    <div class="mb-3">
+                        <h6>Recommendations:</h6>
+                        <ul class="list-unstyled">${recsHtml}</ul>
+                    </div>
+                `;
+                
+                const modal = `
+                    <div class="modal fade" id="efficiencyModal" tabindex="-1">
+                        <div class="modal-dialog">
+                            <div class="modal-content">
+                                <div class="modal-header bg-success text-white">
+                                    <h5 class="modal-title">Route Efficiency - ${result.route_name}</h5>
+                                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                                </div>
+                                <div class="modal-body">${html}</div>
+                                <div class="modal-footer">
+                                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+                $('body').append(modal);
+                new bootstrap.Modal(document.getElementById('efficiencyModal')).show();
+            }
+        }
+    });
+}
+
+function viewScheduleRecommendations() {
+    $.ajax({
+        url: '/api/schedule/recommendations',
+        type: 'GET',
+        success: function(result) {
+            if (result.success) {
+                let recsHtml = '';
+                result.recommendations.forEach(rec => {
+                    const priorityColor = rec.priority === 'Critical' ? 'danger' : rec.priority === 'High' ? 'warning' : 'info';
+                    recsHtml += `
+                        <div class="card mb-2 border-${priorityColor}">
+                            <div class="card-body py-2">
+                                <span class="badge bg-${priorityColor}">${rec.priority}</span>
+                                <strong>${rec.category}</strong><br>
+                                <small>${rec.recommendation}</small>
+                            </div>
+                        </div>
+                    `;
+                });
+                
+                const html = `
+                    <p class="mb-3"><strong>Generated:</strong> ${new Date().toLocaleString()}</p>
+                    <p><strong>Next Review:</strong> ${result.next_review_date.split('T')[0]}</p>
+                    <hr>
+                    ${recsHtml}
+                `;
+                
+                const modal = `
+                    <div class="modal fade" id="recsModal" tabindex="-1">
+                        <div class="modal-dialog modal-lg">
+                            <div class="modal-content">
+                                <div class="modal-header bg-success text-white">
+                                    <h5 class="modal-title">Scheduling Recommendations (${result.total_recommendations})</h5>
+                                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                                </div>
+                                <div class="modal-body">${html}</div>
+                                <div class="modal-footer">
+                                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+                $('body').append(modal);
+                new bootstrap.Modal(document.getElementById('recsModal')).show();
+            }
         }
     });
 }

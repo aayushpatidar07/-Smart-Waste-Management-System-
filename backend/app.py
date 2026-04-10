@@ -42,6 +42,7 @@ from resource_utilization import ResourceUtilizationService
 from data_quality import DataQualityService
 from predictive_analytics import PredictiveAnalyticsService
 from real_time_alerts import RealTimeAlertsService
+from schedule_optimization import ScheduleOptimizationService
 
 # Load environment variables
 load_dotenv()
@@ -2186,6 +2187,92 @@ def get_critical_events():
         hours = int(request.args.get('hours', 24))
         
         result = RealTimeAlertsService().get_critical_events(hours)
+        return jsonify(result), (200 if result.get('success') else 400)
+    
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+        
+# =============================================
+# SCHEDULE OPTIMIZATION
+# =============================================
+
+@app.route('/api/schedule/collection-patterns', methods=['GET'])
+@login_required
+def analyze_collection_patterns():
+    """Analyze historical collection patterns"""
+    try:
+        days = int(request.args.get('days', 30))
+        if days < 1 or days > 365:
+            return jsonify({'success': False, 'message': 'Days must be between 1 and 365'}), 400
+        
+        result = ScheduleOptimizationService().analyze_collection_patterns(days)
+        return jsonify(result), (200 if result.get('success') else 400)
+    
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+@app.route('/api/schedule/optimal-windows', methods=['GET'])
+@login_required
+def get_optimal_collection_windows():
+    """Get optimal collection time windows"""
+    try:
+        zone_id = request.args.get('zone_id', type=int)
+        
+        result = ScheduleOptimizationService().get_optimal_collection_windows(zone_id)
+        return jsonify(result), (200 if result.get('success') else 400)
+    
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+@app.route('/api/schedule/route/<int:route_id>/efficiency', methods=['GET'])
+@login_required
+def get_route_efficiency(route_id):
+    """Calculate efficiency metrics for a route"""
+    try:
+        result = ScheduleOptimizationService().calculate_route_efficiency(route_id)
+        return jsonify(result), (200 if result.get('success') else 400)
+    
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+@app.route('/api/schedule/route/<int:route_id>/optimize', methods=['GET'])
+@login_required
+def optimize_route_sequence(route_id):
+    """Get optimized route sequence suggestion"""
+    try:
+        result = ScheduleOptimizationService().optimize_route_sequence(route_id)
+        return jsonify(result), (200 if result.get('success') else 400)
+    
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+@app.route('/api/schedule/recommendations', methods=['GET'])
+@login_required
+def get_scheduling_recommendations():
+    """Get system-wide scheduling recommendations"""
+    try:
+        result = ScheduleOptimizationService().get_scheduling_recommendations()
+        return jsonify(result), (200 if result.get('success') else 400)
+    
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+@app.route('/api/schedule/vehicle/<int:vehicle_id>/schedule', methods=['GET'])
+@login_required
+def get_vehicle_schedule(vehicle_id):
+    """Get optimized vehicle schedule"""
+    try:
+        days = int(request.args.get('days', 7))
+        if days < 1 or days > 30:
+            return jsonify({'success': False, 'message': 'Days must be between 1 and 30'}), 400
+        
+        result = ScheduleOptimizationService().get_vehicle_schedule(vehicle_id, days)
         return jsonify(result), (200 if result.get('success') else 400)
     
     except Exception as e:
