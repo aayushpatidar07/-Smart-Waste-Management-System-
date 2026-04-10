@@ -42,6 +42,7 @@ from resource_utilization import ResourceUtilizationService
 from data_quality import DataQualityService
 from predictive_analytics import PredictiveAnalyticsService
 from real_time_alerts import RealTimeAlertsService
+from community_leaderboards import CommunityLeaderboardsService
 
 # Load environment variables
 load_dotenv()
@@ -2186,6 +2187,80 @@ def get_critical_events():
         hours = int(request.args.get('hours', 24))
         
         result = RealTimeAlertsService().get_critical_events(hours)
+        return jsonify(result), (200 if result.get('success') else 400)
+    
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+        
+# =============================================
+# COMMUNITY LEADERBOARDS
+# =============================================
+
+@app.route('/api/leaderboards/citizens', methods=['GET'])
+@login_required
+def get_citizen_leaderboard():
+    """Get top citizen contributors leaderboard"""
+    try:
+        days = int(request.args.get('days', 30))
+        limit = int(request.args.get('limit', 20))
+        
+        if days < 1 or days > 365:
+            return jsonify({'success': False, 'message': 'Days must be between 1 and 365'}), 400
+        
+        result = CommunityLeaderboardsService().get_citizen_leaderboard(days, limit)
+        return jsonify(result), (200 if result.get('success') else 400)
+    
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+@app.route('/api/leaderboards/zones', methods=['GET'])
+@login_required
+def get_zone_leaderboard():
+    """Get top performing zones leaderboard"""
+    try:
+        limit = int(request.args.get('limit', 15))
+        
+        result = CommunityLeaderboardsService().get_zone_leaderboard(limit)
+        return jsonify(result), (200 if result.get('success') else 400)
+    
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+@app.route('/api/community/citizen/<int:citizen_id>/stats', methods=['GET'])
+@login_required
+def get_citizen_stats(citizen_id):
+    """Get citizen engagement statistics"""
+    try:
+        result = CommunityLeaderboardsService().get_citizen_stats(citizen_id)
+        return jsonify(result), (200 if result.get('success') else 400)
+    
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+@app.route('/api/community/citizen/<int:citizen_id>/timeline', methods=['GET'])
+@login_required
+def get_contribution_timeline(citizen_id):
+    """Get citizen contribution timeline"""
+    try:
+        days = int(request.args.get('days', 60))
+        
+        result = CommunityLeaderboardsService().get_contribution_timeline(citizen_id, days)
+        return jsonify(result), (200 if result.get('success') else 400)
+    
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+@app.route('/api/community/achievements', methods=['GET'])
+@login_required
+def get_community_achievements():
+    """Get community achievements and milestones"""
+    try:
+        result = CommunityLeaderboardsService().get_community_achievements()
         return jsonify(result), (200 if result.get('success') else 400)
     
     except Exception as e:
