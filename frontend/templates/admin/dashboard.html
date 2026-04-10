@@ -289,6 +289,31 @@
         </div>
     </div>
 
+    <!-- Community Engagement & Leaderboards Section -->
+    <div class="row g-3 mb-4">
+        <div class="col-12">
+            <div class="card border-danger">
+                <div class="card-header bg-danger text-white d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0"><i class="bi bi-people"></i> Community Engagement & Leaderboards</h5>
+                    <div>
+                        <button class="btn btn-sm btn-light" onclick="viewCitizenLeaderboard()">
+                            <i class="bi bi-trophy"></i> Citizen Leaders
+                        </button>
+                        <button class="btn btn-sm btn-light" onclick="viewZoneLeaderboard()">
+                            <i class="bi bi-map"></i> Zone Performance
+                        </button>
+                        <button class="btn btn-sm btn-light" onclick="viewCommunityAchievements()">
+                            <i class="bi bi-star"></i> Achievements
+                        </button>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <p class="text-muted"><i class="bi bi-info-circle"></i> Gamify citizen participation with leaderboards, achievements, and recognition. Track community contributions and encourage sustainable waste management practices.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- Predictive Analytics Section -->
     <div class="row g-3 mb-4">
         <div class="col-12">
@@ -1586,6 +1611,198 @@ function viewScheduleRecommendations() {
                 `;
                 $('body').append(modal);
                 new bootstrap.Modal(document.getElementById('recsModal')).show();
+            }
+        }
+    });
+}
+
+// Community Leaderboards Functions
+
+function viewCitizenLeaderboard() {
+    const days = prompt('View leaderboard for past N days:', '30');
+    if (!days || isNaN(days) || days < 1 || days > 365) return;
+
+    $.ajax({
+        url: `/api/leaderboards/citizens?days=${days}&limit=20`,
+        type: 'GET',
+        success: function(result) {
+            if (result.success && result.leaderboard) {
+                let leaderboardHtml = '';
+                result.leaderboard.forEach(citizen => {
+                    const rankLabel = citizen.rank <= 3 ? `Top ${citizen.rank}` : `#${citizen.rank}`;
+                    leaderboardHtml += `
+                        <tr>
+                            <td><strong>${rankLabel}</strong></td>
+                            <td>${citizen.name}</td>
+                            <td><span class="badge bg-primary">${citizen.reports}</span></td>
+                            <td>${citizen.total_waste_kg} kg</td>
+                            <td>${citizen.active_days} days</td>
+                        </tr>
+                    `;
+                });
+
+                const html = `
+                    <table class="table table-sm">
+                        <thead>
+                            <tr>
+                                <th>Rank</th>
+                                <th>Name</th>
+                                <th>Reports</th>
+                                <th>Total Waste</th>
+                                <th>Active Days</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${leaderboardHtml}
+                        </tbody>
+                    </table>
+                `;
+
+                $('#citizenLeaderboardModal').remove();
+                const modal = `
+                    <div class="modal fade" id="citizenLeaderboardModal" tabindex="-1">
+                        <div class="modal-dialog modal-lg">
+                            <div class="modal-content">
+                                <div class="modal-header bg-danger text-white">
+                                    <h5 class="modal-title">Top Citizen Contributors (${result.period_days} days)</h5>
+                                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                                </div>
+                                <div class="modal-body">${html}</div>
+                                <div class="modal-footer">
+                                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+                $('body').append(modal);
+                new bootstrap.Modal(document.getElementById('citizenLeaderboardModal')).show();
+            }
+        }
+    });
+}
+
+function viewZoneLeaderboard() {
+    $.ajax({
+        url: '/api/leaderboards/zones?limit=15',
+        type: 'GET',
+        success: function(result) {
+            if (result.success && result.leaderboard) {
+                let leaderboardHtml = '';
+                result.leaderboard.forEach(zone => {
+                    const rankLabel = zone.rank <= 3 ? `Top ${zone.rank}` : `#${zone.rank}`;
+                    leaderboardHtml += `
+                        <tr>
+                            <td><strong>${rankLabel}</strong></td>
+                            <td>Zone ${zone.zone_id}</td>
+                            <td>${zone.total_bins}</td>
+                            <td>${zone.avg_fill_level}%</td>
+                            <td>${zone.total_waste_collected_kg} kg</td>
+                            <td><span class="badge bg-success">${zone.performance_score}</span></td>
+                        </tr>
+                    `;
+                });
+
+                const html = `
+                    <table class="table table-sm">
+                        <thead>
+                            <tr>
+                                <th>Rank</th>
+                                <th>Zone</th>
+                                <th>Bins</th>
+                                <th>Avg Fill</th>
+                                <th>Total Waste</th>
+                                <th>Performance</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${leaderboardHtml}
+                        </tbody>
+                    </table>
+                `;
+
+                $('#zoneLeaderboardModal').remove();
+                const modal = `
+                    <div class="modal fade" id="zoneLeaderboardModal" tabindex="-1">
+                        <div class="modal-dialog modal-lg">
+                            <div class="modal-content">
+                                <div class="modal-header bg-danger text-white">
+                                    <h5 class="modal-title">Zone Performance Leaderboard</h5>
+                                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                                </div>
+                                <div class="modal-body">${html}</div>
+                                <div class="modal-footer">
+                                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+                $('body').append(modal);
+                new bootstrap.Modal(document.getElementById('zoneLeaderboardModal')).show();
+            }
+        }
+    });
+}
+
+function viewCommunityAchievements() {
+    $.ajax({
+        url: '/api/community/achievements',
+        type: 'GET',
+        success: function(result) {
+            if (result.success) {
+                let statsHtml = `
+                    <div class="row mb-3">
+                        <div class="col-md-3 text-center">
+                            <h4 class="text-primary">${result.total_community_members}</h4>
+                            <small>Community Members</small>
+                        </div>
+                        <div class="col-md-3 text-center">
+                            <h4 class="text-success">${result.total_reports_submitted}</h4>
+                            <small>Reports Submitted</small>
+                        </div>
+                        <div class="col-md-3 text-center">
+                            <h4 class="text-info">${result.total_waste_reported_kg}</h4>
+                            <small>Waste Reported (kg)</small>
+                        </div>
+                        <div class="col-md-3 text-center">
+                            <h4 class="text-warning">${result.engagement_rate}%</h4>
+                            <small>Engagement Rate</small>
+                        </div>
+                    </div>
+                    <hr>
+                    <h6>Community Achievements:</h6>
+                `;
+
+                result.achievements.forEach(ach => {
+                    statsHtml += `
+                        <div class="alert alert-success mb-2">
+                            <span class="fs-4">${ach.icon}</span>
+                            <strong>${ach.name}</strong><br>
+                            <small>${ach.desc}</small>
+                        </div>
+                    `;
+                });
+
+                $('#achievementsModal').remove();
+                const modal = `
+                    <div class="modal fade" id="achievementsModal" tabindex="-1">
+                        <div class="modal-dialog modal-lg">
+                            <div class="modal-content">
+                                <div class="modal-header bg-danger text-white">
+                                    <h5 class="modal-title">Community Achievements</h5>
+                                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                                </div>
+                                <div class="modal-body">${statsHtml}</div>
+                                <div class="modal-footer">
+                                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+                $('body').append(modal);
+                new bootstrap.Modal(document.getElementById('achievementsModal')).show();
             }
         }
     });
