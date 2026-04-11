@@ -42,7 +42,7 @@ from resource_utilization import ResourceUtilizationService
 from data_quality import DataQualityService
 from predictive_analytics import PredictiveAnalyticsService
 from real_time_alerts import RealTimeAlertsService
-from community_leaderboards import CommunityLeaderboardsService
+from compliance_reporting import ComplianceReportingService
 
 # Load environment variables
 load_dotenv()
@@ -2192,77 +2192,103 @@ def get_critical_events():
     except Exception as e:
         return jsonify({'success': False, 'error': str(e)}), 500
 
-        
+
 # =============================================
-# COMMUNITY LEADERBOARDS
+# COMPLIANCE & REGULATORY REPORTING
 # =============================================
 
-@app.route('/api/leaderboards/citizens', methods=['GET'])
+@app.route('/api/compliance/waste-disposal', methods=['POST'])
 @login_required
-def get_citizen_leaderboard():
-    """Get top citizen contributors leaderboard"""
+def get_waste_disposal_report():
+    """Generate waste disposal compliance report"""
     try:
-        days = int(request.args.get('days', 30))
-        limit = int(request.args.get('limit', 20))
-        
-        if days < 1 or days > 365:
-            return jsonify({'success': False, 'message': 'Days must be between 1 and 365'}), 400
-        
-        result = CommunityLeaderboardsService().get_citizen_leaderboard(days, limit)
+        data = request.get_json() or {}
+        start_date_str = data.get('start_date')
+        end_date_str = data.get('end_date')
+
+        if not start_date_str or not end_date_str:
+            return jsonify({'success': False, 'message': 'start_date and end_date required'}), 400
+
+        start_date = datetime.fromisoformat(start_date_str)
+        end_date = datetime.fromisoformat(end_date_str)
+
+        result = ComplianceReportingService().generate_waste_disposal_report(start_date, end_date)
         return jsonify(result), (200 if result.get('success') else 400)
-    
+
     except Exception as e:
         return jsonify({'success': False, 'error': str(e)}), 500
 
 
-@app.route('/api/leaderboards/zones', methods=['GET'])
+@app.route('/api/compliance/environmental-impact', methods=['POST'])
 @login_required
-def get_zone_leaderboard():
-    """Get top performing zones leaderboard"""
+def get_environmental_impact_report():
+    """Generate environmental impact compliance report"""
     try:
-        limit = int(request.args.get('limit', 15))
-        
-        result = CommunityLeaderboardsService().get_zone_leaderboard(limit)
+        data = request.get_json() or {}
+        start_date_str = data.get('start_date')
+        end_date_str = data.get('end_date')
+
+        if not start_date_str or not end_date_str:
+            return jsonify({'success': False, 'message': 'start_date and end_date required'}), 400
+
+        start_date = datetime.fromisoformat(start_date_str)
+        end_date = datetime.fromisoformat(end_date_str)
+
+        result = ComplianceReportingService().generate_environmental_impact_report(start_date, end_date)
         return jsonify(result), (200 if result.get('success') else 400)
-    
+
     except Exception as e:
         return jsonify({'success': False, 'error': str(e)}), 500
 
 
-@app.route('/api/community/citizen/<int:citizen_id>/stats', methods=['GET'])
+@app.route('/api/compliance/operational-efficiency', methods=['POST'])
 @login_required
-def get_citizen_stats(citizen_id):
-    """Get citizen engagement statistics"""
+def get_operational_efficiency_report():
+    """Generate operational efficiency report"""
     try:
-        result = CommunityLeaderboardsService().get_citizen_stats(citizen_id)
+        data = request.get_json() or {}
+        start_date_str = data.get('start_date')
+        end_date_str = data.get('end_date')
+
+        if not start_date_str or not end_date_str:
+            return jsonify({'success': False, 'message': 'start_date and end_date required'}), 400
+
+        start_date = datetime.fromisoformat(start_date_str)
+        end_date = datetime.fromisoformat(end_date_str)
+
+        result = ComplianceReportingService().generate_operational_efficiency_report(start_date, end_date)
         return jsonify(result), (200 if result.get('success') else 400)
-    
+
     except Exception as e:
         return jsonify({'success': False, 'error': str(e)}), 500
 
 
-@app.route('/api/community/citizen/<int:citizen_id>/timeline', methods=['GET'])
+@app.route('/api/compliance/safety', methods=['GET'])
 @login_required
-def get_contribution_timeline(citizen_id):
-    """Get citizen contribution timeline"""
+def get_safety_compliance_report():
+    """Generate safety compliance report"""
     try:
-        days = int(request.args.get('days', 60))
-        
-        result = CommunityLeaderboardsService().get_contribution_timeline(citizen_id, days)
+        result = ComplianceReportingService().generate_safety_compliance_report()
         return jsonify(result), (200 if result.get('success') else 400)
-    
+
     except Exception as e:
         return jsonify({'success': False, 'error': str(e)}), 500
 
 
-@app.route('/api/community/achievements', methods=['GET'])
+@app.route('/api/compliance/quarterly-summary', methods=['GET'])
 @login_required
-def get_community_achievements():
-    """Get community achievements and milestones"""
+def get_quarterly_summary():
+    """Generate quarterly compliance summary"""
     try:
-        result = CommunityLeaderboardsService().get_community_achievements()
+        quarter = int(request.args.get('quarter', 1))
+        year = int(request.args.get('year', datetime.now().year))
+
+        if quarter < 1 or quarter > 4:
+            return jsonify({'success': False, 'message': 'Quarter must be 1-4'}), 400
+
+        result = ComplianceReportingService().generate_quarterly_compliance_summary(quarter, year)
         return jsonify(result), (200 if result.get('success') else 400)
-    
+
     except Exception as e:
         return jsonify({'success': False, 'error': str(e)}), 500
 
