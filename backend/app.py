@@ -43,6 +43,7 @@ from data_quality import DataQualityService
 from predictive_analytics import PredictiveAnalyticsService
 from real_time_alerts import RealTimeAlertsService
 from compliance_reporting import ComplianceReportingService
+from service_availability import ServiceAvailabilityService
 
 # Load environment variables
 load_dotenv()
@@ -2289,6 +2290,73 @@ def get_quarterly_summary():
         result = ComplianceReportingService().generate_quarterly_compliance_summary(quarter, year)
         return jsonify(result), (200 if result.get('success') else 400)
 
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+# =============================================
+# SERVICE AVAILABILITY INSIGHTS
+# =============================================
+
+@app.route('/api/availability/bins', methods=['GET'])
+@login_required
+def get_bin_availability_insights():
+    """Get availability breakdown for smart bins."""
+    try:
+        result = ServiceAvailabilityService().get_bin_availability()
+        return jsonify(result), (200 if result.get('success') else 400)
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+@app.route('/api/availability/vehicles', methods=['GET'])
+@login_required
+def get_vehicle_availability_insights():
+    """Get fleet readiness and vehicle availability metrics."""
+    try:
+        result = ServiceAvailabilityService().get_vehicle_availability()
+        return jsonify(result), (200 if result.get('success') else 400)
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+@app.route('/api/availability/routes', methods=['GET'])
+@login_required
+def get_route_completion_insights():
+    """Get route completion insights for recent days."""
+    try:
+        days = int(request.args.get('days', 14))
+        if days < 1 or days > 90:
+            return jsonify({'success': False, 'message': 'days must be between 1 and 90'}), 400
+
+        result = ServiceAvailabilityService().get_route_completion(days)
+        return jsonify(result), (200 if result.get('success') else 400)
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+@app.route('/api/availability/score', methods=['GET'])
+@login_required
+def get_system_availability_score():
+    """Get weighted overall system availability score."""
+    try:
+        result = ServiceAvailabilityService().get_system_availability_score()
+        return jsonify(result), (200 if result.get('success') else 400)
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+@app.route('/api/availability/service-gaps', methods=['GET'])
+@login_required
+def get_service_gaps():
+    """Get zone-level service gaps prioritized by risk."""
+    try:
+        limit = int(request.args.get('limit', 8))
+        if limit < 1 or limit > 20:
+            return jsonify({'success': False, 'message': 'limit must be between 1 and 20'}), 400
+
+        result = ServiceAvailabilityService().get_zone_service_gaps(limit)
+        return jsonify(result), (200 if result.get('success') else 400)
     except Exception as e:
         return jsonify({'success': False, 'error': str(e)}), 500
 
