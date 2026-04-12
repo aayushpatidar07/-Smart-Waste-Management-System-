@@ -342,6 +342,31 @@
         </div>
     </div>
 
+    <!-- Incident Response Metrics Section -->
+    <div class="row g-3 mb-4">
+        <div class="col-12">
+            <div class="card border-warning">
+                <div class="card-header bg-warning text-dark d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0"><i class="bi bi-shield-check"></i> Incident Response Metrics</h5>
+                    <div>
+                        <button class="btn btn-sm btn-dark" onclick="viewIncidentHealth()">
+                            <i class="bi bi-heart-pulse"></i> Health Score
+                        </button>
+                        <button class="btn btn-sm btn-dark" onclick="viewIncidentSLA()">
+                            <i class="bi bi-stopwatch"></i> SLA Compliance
+                        </button>
+                        <button class="btn btn-sm btn-dark" onclick="viewIncidentTrend()">
+                            <i class="bi bi-graph-up-arrow"></i> Response Trend
+                        </button>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <p class="text-muted"><i class="bi bi-info-circle"></i> Monitor incident closure speed, SLA attainment, and response trend to improve operational reliability.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- Predictive Analytics Section -->
     <div class="row g-3 mb-4">
         <div class="col-12">
@@ -1698,6 +1723,174 @@ function generateQuarterlyReport() {
 
 function downloadReport() {
     alert('PDF download functionality integrated. Report ready for export.');
+}
+
+// Incident Response Metrics Functions
+
+function viewIncidentHealth() {
+    const days = prompt('Incident health window (days):', '30');
+    if (!days || isNaN(days) || days < 1 || days > 180) return;
+
+    $.ajax({
+        url: `/api/incidents/health?days=${days}`,
+        type: 'GET',
+        success: function(result) {
+            if (result.success) {
+                const statusColor = result.status === 'Healthy' ? 'success' : result.status === 'Watch' ? 'warning' : 'danger';
+                const html = `
+                    <div class="mb-3">
+                        <h6>Incident Response Health</h6>
+                        <div class="progress mb-2">
+                            <div class="progress-bar bg-${statusColor}" style="width: ${result.health_score}%"></div>
+                        </div>
+                        <p><strong>${result.health_score}%</strong> <span class="badge bg-${statusColor}">${result.status}</span></p>
+                    </div>
+                    <div class="row text-center">
+                        <div class="col-md-4 mb-2"><small class="text-muted d-block">Closure Rate</small><strong>${result.components.closure_rate_percent}%</strong></div>
+                        <div class="col-md-4 mb-2"><small class="text-muted d-block">SLA</small><strong>${result.components.sla_percent}%</strong></div>
+                        <div class="col-md-4 mb-2"><small class="text-muted d-block">Ack Speed</small><strong>${result.components.ack_speed_component}%</strong></div>
+                    </div>
+                `;
+
+                $('#incidentHealthModal').remove();
+                const modal = `
+                    <div class="modal fade" id="incidentHealthModal" tabindex="-1">
+                        <div class="modal-dialog">
+                            <div class="modal-content">
+                                <div class="modal-header bg-warning text-dark">
+                                    <h5 class="modal-title">Incident Response Health (${days} days)</h5>
+                                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                                </div>
+                                <div class="modal-body">${html}</div>
+                                <div class="modal-footer">
+                                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+                $('body').append(modal);
+                new bootstrap.Modal(document.getElementById('incidentHealthModal')).show();
+            }
+        },
+        error: function() {
+            alert('Failed to fetch incident health score.');
+        }
+    });
+}
+
+function viewIncidentSLA() {
+    const days = prompt('SLA window (days):', '30');
+    if (!days || isNaN(days) || days < 1 || days > 180) return;
+
+    $.ajax({
+        url: `/api/incidents/sla?days=${days}`,
+        type: 'GET',
+        success: function(result) {
+            if (result.success) {
+                let rows = '';
+                result.by_severity.forEach(item => {
+                    const badge = item.sla_percent >= 85 ? 'success' : item.sla_percent >= 70 ? 'warning' : 'danger';
+                    rows += `
+                        <tr>
+                            <td class="text-capitalize">${item.severity}</td>
+                            <td>${item.within_sla}/${item.total}</td>
+                            <td>${item.target_minutes} min</td>
+                            <td><span class="badge bg-${badge}">${item.sla_percent}%</span></td>
+                            <td>${item.avg_ack_minutes || 0} min</td>
+                        </tr>
+                    `;
+                });
+
+                const html = `
+                    <p><strong>Overall SLA Compliance:</strong> ${result.overall_sla_percent}%</p>
+                    <table class="table table-sm">
+                        <thead><tr><th>Severity</th><th>Within SLA</th><th>Target</th><th>Compliance</th><th>Avg Ack</th></tr></thead>
+                        <tbody>${rows}</tbody>
+                    </table>
+                `;
+
+                $('#incidentSlaModal').remove();
+                const modal = `
+                    <div class="modal fade" id="incidentSlaModal" tabindex="-1">
+                        <div class="modal-dialog modal-lg">
+                            <div class="modal-content">
+                                <div class="modal-header bg-warning text-dark">
+                                    <h5 class="modal-title">SLA Compliance (${days} days)</h5>
+                                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                                </div>
+                                <div class="modal-body">${html}</div>
+                                <div class="modal-footer">
+                                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+                $('body').append(modal);
+                new bootstrap.Modal(document.getElementById('incidentSlaModal')).show();
+            }
+        },
+        error: function() {
+            alert('Failed to fetch SLA compliance.');
+        }
+    });
+}
+
+function viewIncidentTrend() {
+    const days = prompt('Trend window (days):', '14');
+    if (!days || isNaN(days) || days < 1 || days > 60) return;
+
+    $.ajax({
+        url: `/api/incidents/trend?days=${days}`,
+        type: 'GET',
+        success: function(result) {
+            if (result.success) {
+                let rows = '';
+                result.trend.forEach(item => {
+                    rows += `
+                        <tr>
+                            <td>${item.day}</td>
+                            <td>${item.created_count}</td>
+                            <td>${item.acknowledged_count}</td>
+                            <td>${item.resolved_count}</td>
+                            <td>${item.active_count}</td>
+                        </tr>
+                    `;
+                });
+
+                const html = `
+                    <table class="table table-sm">
+                        <thead><tr><th>Date</th><th>Created</th><th>Acknowledged</th><th>Resolved</th><th>Active</th></tr></thead>
+                        <tbody>${rows}</tbody>
+                    </table>
+                `;
+
+                $('#incidentTrendModal').remove();
+                const modal = `
+                    <div class="modal fade" id="incidentTrendModal" tabindex="-1">
+                        <div class="modal-dialog modal-lg">
+                            <div class="modal-content">
+                                <div class="modal-header bg-warning text-dark">
+                                    <h5 class="modal-title">Incident Response Trend (${days} days)</h5>
+                                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                                </div>
+                                <div class="modal-body">${html}</div>
+                                <div class="modal-footer">
+                                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+                $('body').append(modal);
+                new bootstrap.Modal(document.getElementById('incidentTrendModal')).show();
+            }
+        },
+        error: function() {
+            alert('Failed to fetch incident trend.');
+        }
+    });
 }
 
 // Schedule Optimization Functions

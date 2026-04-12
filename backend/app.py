@@ -43,6 +43,7 @@ from data_quality import DataQualityService
 from predictive_analytics import PredictiveAnalyticsService
 from real_time_alerts import RealTimeAlertsService
 from compliance_reporting import ComplianceReportingService
+from incident_response_metrics import IncidentResponseMetricsService
 
 # Load environment variables
 load_dotenv()
@@ -2289,6 +2290,85 @@ def get_quarterly_summary():
         result = ComplianceReportingService().generate_quarterly_compliance_summary(quarter, year)
         return jsonify(result), (200 if result.get('success') else 400)
 
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+# =============================================
+# INCIDENT RESPONSE METRICS
+# =============================================
+
+@app.route('/api/incidents/summary', methods=['GET'])
+@login_required
+def get_incident_response_summary():
+    """Get incident response summary for recent days."""
+    try:
+        days = int(request.args.get('days', 30))
+        if days < 1 or days > 180:
+            return jsonify({'success': False, 'message': 'days must be between 1 and 180'}), 400
+
+        result = IncidentResponseMetricsService().get_response_summary(days)
+        return jsonify(result), (200 if result.get('success') else 400)
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+@app.route('/api/incidents/severity', methods=['GET'])
+@login_required
+def get_incident_severity_breakdown():
+    """Get incident severity breakdown and backlog."""
+    try:
+        days = int(request.args.get('days', 30))
+        if days < 1 or days > 180:
+            return jsonify({'success': False, 'message': 'days must be between 1 and 180'}), 400
+
+        result = IncidentResponseMetricsService().get_severity_breakdown(days)
+        return jsonify(result), (200 if result.get('success') else 400)
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+@app.route('/api/incidents/sla', methods=['GET'])
+@login_required
+def get_incident_sla_compliance():
+    """Get SLA compliance by severity."""
+    try:
+        days = int(request.args.get('days', 30))
+        if days < 1 or days > 180:
+            return jsonify({'success': False, 'message': 'days must be between 1 and 180'}), 400
+
+        result = IncidentResponseMetricsService().get_sla_compliance(days)
+        return jsonify(result), (200 if result.get('success') else 400)
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+@app.route('/api/incidents/trend', methods=['GET'])
+@login_required
+def get_incident_response_trend():
+    """Get daily incident response trend."""
+    try:
+        days = int(request.args.get('days', 14))
+        if days < 1 or days > 60:
+            return jsonify({'success': False, 'message': 'days must be between 1 and 60'}), 400
+
+        result = IncidentResponseMetricsService().get_response_trend(days)
+        return jsonify(result), (200 if result.get('success') else 400)
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+@app.route('/api/incidents/health', methods=['GET'])
+@login_required
+def get_incident_response_health():
+    """Get consolidated incident response health score."""
+    try:
+        days = int(request.args.get('days', 30))
+        if days < 1 or days > 180:
+            return jsonify({'success': False, 'message': 'days must be between 1 and 180'}), 400
+
+        result = IncidentResponseMetricsService().get_response_health_score(days)
+        return jsonify(result), (200 if result.get('success') else 400)
     except Exception as e:
         return jsonify({'success': False, 'error': str(e)}), 500
 
