@@ -342,6 +342,31 @@
         </div>
     </div>
 
+    <!-- Service Availability Insights Section -->
+    <div class="row g-3 mb-4">
+        <div class="col-12">
+            <div class="card border-dark">
+                <div class="card-header bg-dark text-white d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0"><i class="bi bi-activity"></i> Service Availability Insights</h5>
+                    <div>
+                        <button class="btn btn-sm btn-light" onclick="viewAvailabilityScore()">
+                            <i class="bi bi-speedometer2"></i> System Score
+                        </button>
+                        <button class="btn btn-sm btn-light" onclick="viewBinAvailability()">
+                            <i class="bi bi-trash3"></i> Bin Availability
+                        </button>
+                        <button class="btn btn-sm btn-light" onclick="viewServiceGaps()">
+                            <i class="bi bi-exclamation-octagon"></i> Service Gaps
+                        </button>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <p class="text-muted"><i class="bi bi-info-circle"></i> Track operational continuity using weighted availability score, fleet readiness, route completion, and zone-level service gaps.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- Predictive Analytics Section -->
     <div class="row g-3 mb-4">
         <div class="col-12">
@@ -1698,6 +1723,173 @@ function generateQuarterlyReport() {
 
 function downloadReport() {
     alert('PDF download functionality integrated. Report ready for export.');
+}
+
+// Service Availability Insights Functions
+
+function viewAvailabilityScore() {
+    $.ajax({
+        url: '/api/availability/score',
+        type: 'GET',
+        success: function(result) {
+            if (result.success) {
+                const statusColor = result.status === 'Healthy' ? 'success' : result.status === 'Watch' ? 'warning' : 'danger';
+                const html = `
+                    <div class="mb-3">
+                        <h6>Overall Availability Score</h6>
+                        <div class="progress mb-2">
+                            <div class="progress-bar bg-${statusColor}" style="width: ${result.availability_score}%"></div>
+                        </div>
+                        <p><strong>${result.availability_score}%</strong> <span class="badge bg-${statusColor}">${result.status}</span></p>
+                    </div>
+                    <div class="row text-center">
+                        <div class="col-6 col-md-3 mb-2"><small class="text-muted d-block">Bins</small><strong>${result.components.bins}%</strong></div>
+                        <div class="col-6 col-md-3 mb-2"><small class="text-muted d-block">Vehicles</small><strong>${result.components.vehicles}%</strong></div>
+                        <div class="col-6 col-md-3 mb-2"><small class="text-muted d-block">Routes</small><strong>${result.components.routes}%</strong></div>
+                        <div class="col-6 col-md-3 mb-2"><small class="text-muted d-block">Alert Resilience</small><strong>${result.components.alert_resilience}%</strong></div>
+                    </div>
+                    <hr>
+                    <p class="mb-0"><strong>Active Alerts:</strong> ${result.active_alerts} | <strong>Critical Alerts:</strong> ${result.critical_alerts}</p>
+                `;
+
+                $('#availabilityScoreModal').remove();
+                const modal = `
+                    <div class="modal fade" id="availabilityScoreModal" tabindex="-1">
+                        <div class="modal-dialog">
+                            <div class="modal-content">
+                                <div class="modal-header bg-dark text-white">
+                                    <h5 class="modal-title">Service Availability Score</h5>
+                                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                                </div>
+                                <div class="modal-body">${html}</div>
+                                <div class="modal-footer">
+                                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+                $('body').append(modal);
+                new bootstrap.Modal(document.getElementById('availabilityScoreModal')).show();
+            }
+        },
+        error: function() {
+            alert('Failed to fetch availability score.');
+        }
+    });
+}
+
+function viewBinAvailability() {
+    $.ajax({
+        url: '/api/availability/bins',
+        type: 'GET',
+        success: function(result) {
+            if (result.success) {
+                let rows = '';
+                result.zones.forEach(zone => {
+                    rows += `
+                        <tr>
+                            <td>${zone.zone || 'Unassigned'}</td>
+                            <td>${zone.active_bins}/${zone.total_bins}</td>
+                            <td>${zone.availability_percent}%</td>
+                        </tr>
+                    `;
+                });
+
+                const html = `
+                    <div class="row mb-3 text-center">
+                        <div class="col-3"><small class="text-muted d-block">Total</small><strong>${result.total_bins}</strong></div>
+                        <div class="col-3"><small class="text-muted d-block">Active</small><strong>${result.active_bins}</strong></div>
+                        <div class="col-3"><small class="text-muted d-block">Maintenance</small><strong>${result.maintenance_bins}</strong></div>
+                        <div class="col-3"><small class="text-muted d-block">Inactive</small><strong>${result.inactive_bins}</strong></div>
+                    </div>
+                    <p><strong>Availability:</strong> ${result.availability_percent}%</p>
+                    <table class="table table-sm">
+                        <thead><tr><th>Zone</th><th>Active/Total</th><th>Availability</th></tr></thead>
+                        <tbody>${rows}</tbody>
+                    </table>
+                `;
+
+                $('#binAvailabilityModal').remove();
+                const modal = `
+                    <div class="modal fade" id="binAvailabilityModal" tabindex="-1">
+                        <div class="modal-dialog modal-lg">
+                            <div class="modal-content">
+                                <div class="modal-header bg-dark text-white">
+                                    <h5 class="modal-title">Bin Availability Overview</h5>
+                                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                                </div>
+                                <div class="modal-body">${html}</div>
+                                <div class="modal-footer">
+                                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+                $('body').append(modal);
+                new bootstrap.Modal(document.getElementById('binAvailabilityModal')).show();
+            }
+        },
+        error: function() {
+            alert('Failed to fetch bin availability.');
+        }
+    });
+}
+
+function viewServiceGaps() {
+    $.ajax({
+        url: '/api/availability/service-gaps?limit=10',
+        type: 'GET',
+        success: function(result) {
+            if (result.success) {
+                let rows = '';
+                result.service_gaps.forEach(gap => {
+                    const badge = gap.priority === 'High' ? 'danger' : gap.priority === 'Medium' ? 'warning' : 'secondary';
+                    rows += `
+                        <tr>
+                            <td>${gap.zone || 'Unassigned'}</td>
+                            <td>${gap.availability_percent}%</td>
+                            <td>${gap.unavailable_bins}/${gap.total_bins}</td>
+                            <td>${gap.active_alerts}</td>
+                            <td><span class="badge bg-${badge}">${gap.priority}</span></td>
+                        </tr>
+                    `;
+                });
+
+                const html = `
+                    <p><strong>Zones Evaluated:</strong> ${result.total_zones}</p>
+                    <table class="table table-sm">
+                        <thead><tr><th>Zone</th><th>Availability</th><th>Unavailable</th><th>Active Alerts</th><th>Priority</th></tr></thead>
+                        <tbody>${rows}</tbody>
+                    </table>
+                `;
+
+                $('#serviceGapsModal').remove();
+                const modal = `
+                    <div class="modal fade" id="serviceGapsModal" tabindex="-1">
+                        <div class="modal-dialog modal-lg">
+                            <div class="modal-content">
+                                <div class="modal-header bg-dark text-white">
+                                    <h5 class="modal-title">Zone Service Gaps</h5>
+                                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                                </div>
+                                <div class="modal-body">${html}</div>
+                                <div class="modal-footer">
+                                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+                $('body').append(modal);
+                new bootstrap.Modal(document.getElementById('serviceGapsModal')).show();
+            }
+        },
+        error: function() {
+            alert('Failed to fetch service gaps.');
+        }
+    });
 }
 
 // Schedule Optimization Functions
