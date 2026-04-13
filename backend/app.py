@@ -43,6 +43,7 @@ from data_quality import DataQualityService
 from predictive_analytics import PredictiveAnalyticsService
 from real_time_alerts import RealTimeAlertsService
 from compliance_reporting import ComplianceReportingService
+from collection_productivity import CollectionProductivityService
 from service_availability import ServiceAvailabilityService
 
 # Load environment variables
@@ -2356,6 +2357,88 @@ def get_service_gaps():
             return jsonify({'success': False, 'message': 'limit must be between 1 and 20'}), 400
 
         result = ServiceAvailabilityService().get_zone_service_gaps(limit)
+        return jsonify(result), (200 if result.get('success') else 400)
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+# =============================================
+# COLLECTION PRODUCTIVITY INSIGHTS
+# =============================================
+
+@app.route('/api/productivity/overview', methods=['GET'])
+@login_required
+def get_collection_productivity_overview():
+    """Get collection productivity overview metrics."""
+    try:
+        days = int(request.args.get('days', 30))
+        if days < 1 or days > 180:
+            return jsonify({'success': False, 'message': 'days must be between 1 and 180'}), 400
+
+        result = CollectionProductivityService().get_productivity_overview(days)
+        return jsonify(result), (200 if result.get('success') else 400)
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+@app.route('/api/productivity/vehicles', methods=['GET'])
+@login_required
+def get_vehicle_productivity_ranking():
+    """Get top vehicle productivity ranking."""
+    try:
+        days = int(request.args.get('days', 30))
+        limit = int(request.args.get('limit', 10))
+        if days < 1 or days > 180:
+            return jsonify({'success': False, 'message': 'days must be between 1 and 180'}), 400
+        if limit < 1 or limit > 20:
+            return jsonify({'success': False, 'message': 'limit must be between 1 and 20'}), 400
+
+        result = CollectionProductivityService().get_vehicle_productivity(days, limit)
+        return jsonify(result), (200 if result.get('success') else 400)
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+@app.route('/api/productivity/routes', methods=['GET'])
+@login_required
+def get_route_productivity_insights():
+    """Get route completion and productivity breakdown."""
+    try:
+        days = int(request.args.get('days', 30))
+        if days < 1 or days > 180:
+            return jsonify({'success': False, 'message': 'days must be between 1 and 180'}), 400
+
+        result = CollectionProductivityService().get_route_productivity(days)
+        return jsonify(result), (200 if result.get('success') else 400)
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+@app.route('/api/productivity/zones', methods=['GET'])
+@login_required
+def get_zone_productivity_insights():
+    """Get zone-wise collection productivity indicators."""
+    try:
+        days = int(request.args.get('days', 30))
+        if days < 1 or days > 180:
+            return jsonify({'success': False, 'message': 'days must be between 1 and 180'}), 400
+
+        result = CollectionProductivityService().get_zone_productivity(days)
+        return jsonify(result), (200 if result.get('success') else 400)
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+@app.route('/api/productivity/recommendations', methods=['GET'])
+@login_required
+def get_productivity_recommendations():
+    """Get productivity optimization recommendations."""
+    try:
+        days = int(request.args.get('days', 30))
+        if days < 1 or days > 180:
+            return jsonify({'success': False, 'message': 'days must be between 1 and 180'}), 400
+
+        result = CollectionProductivityService().get_productivity_recommendations(days)
         return jsonify(result), (200 if result.get('success') else 400)
     except Exception as e:
         return jsonify({'success': False, 'error': str(e)}), 500

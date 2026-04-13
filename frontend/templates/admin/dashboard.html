@@ -367,6 +367,31 @@
         </div>
     </div>
 
+    <!-- Collection Productivity Insights Section -->
+    <div class="row g-3 mb-4">
+        <div class="col-12">
+            <div class="card border-info">
+                <div class="card-header bg-info text-white d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0"><i class="bi bi-bar-chart-steps"></i> Collection Productivity Insights</h5>
+                    <div>
+                        <button class="btn btn-sm btn-light" onclick="viewProductivityOverview()">
+                            <i class="bi bi-speedometer2"></i> Overview
+                        </button>
+                        <button class="btn btn-sm btn-light" onclick="viewVehicleProductivity()">
+                            <i class="bi bi-truck"></i> Vehicle Ranking
+                        </button>
+                        <button class="btn btn-sm btn-light" onclick="viewProductivityRecommendations()">
+                            <i class="bi bi-lightbulb"></i> Recommendations
+                        </button>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <p class="text-muted"><i class="bi bi-info-circle"></i> Track throughput, route completion quality, and vehicle productivity to optimize collection operations.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- Predictive Analytics Section -->
     <div class="row g-3 mb-4">
         <div class="col-12">
@@ -1723,6 +1748,169 @@ function generateQuarterlyReport() {
 
 function downloadReport() {
     alert('PDF download functionality integrated. Report ready for export.');
+}
+
+// Collection Productivity Insights Functions
+
+function viewProductivityOverview() {
+    const days = prompt('Overview window (days):', '30');
+    if (!days || isNaN(days) || days < 1 || days > 180) return;
+
+    $.ajax({
+        url: `/api/productivity/overview?days=${days}`,
+        type: 'GET',
+        success: function(result) {
+            if (result.success) {
+                const html = `
+                    <div class="row text-center mb-3">
+                        <div class="col-6 col-md-3"><small class="text-muted d-block">Collections</small><strong>${result.total_collections}</strong></div>
+                        <div class="col-6 col-md-3"><small class="text-muted d-block">Vehicles</small><strong>${result.active_vehicles}</strong></div>
+                        <div class="col-6 col-md-3"><small class="text-muted d-block">Routes</small><strong>${result.active_routes}</strong></div>
+                        <div class="col-6 col-md-3"><small class="text-muted d-block">Throughput/Day</small><strong>${result.daily_throughput}</strong></div>
+                    </div>
+                    <hr>
+                    <p><strong>Total Waste:</strong> ${result.total_waste} kg</p>
+                    <p><strong>Avg Waste/Collection:</strong> ${result.avg_waste_per_collection} kg</p>
+                    <p class="mb-0"><strong>Avg Fill-Level Reduction:</strong> ${result.avg_level_reduction}%</p>
+                `;
+
+                $('#productivityOverviewModal').remove();
+                const modal = `
+                    <div class="modal fade" id="productivityOverviewModal" tabindex="-1">
+                        <div class="modal-dialog">
+                            <div class="modal-content">
+                                <div class="modal-header bg-info text-white">
+                                    <h5 class="modal-title">Productivity Overview (${days} days)</h5>
+                                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                                </div>
+                                <div class="modal-body">${html}</div>
+                                <div class="modal-footer">
+                                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+                $('body').append(modal);
+                new bootstrap.Modal(document.getElementById('productivityOverviewModal')).show();
+            }
+        },
+        error: function() {
+            alert('Failed to fetch productivity overview.');
+        }
+    });
+}
+
+function viewVehicleProductivity() {
+    const days = prompt('Vehicle ranking window (days):', '30');
+    if (!days || isNaN(days) || days < 1 || days > 180) return;
+
+    $.ajax({
+        url: `/api/productivity/vehicles?days=${days}&limit=10`,
+        type: 'GET',
+        success: function(result) {
+            if (result.success) {
+                let rows = '';
+                result.vehicles.forEach(v => {
+                    rows += `
+                        <tr>
+                            <td>#${v.rank}</td>
+                            <td>${v.vehicle_number}</td>
+                            <td>${v.driver_name || 'N/A'}</td>
+                            <td>${v.collections}</td>
+                            <td>${v.waste_collected || 0} kg</td>
+                            <td>${v.routes_served}</td>
+                        </tr>
+                    `;
+                });
+
+                const html = `
+                    <table class="table table-sm">
+                        <thead><tr><th>Rank</th><th>Vehicle</th><th>Driver</th><th>Collections</th><th>Waste</th><th>Routes</th></tr></thead>
+                        <tbody>${rows}</tbody>
+                    </table>
+                `;
+
+                $('#vehicleProductivityModal').remove();
+                const modal = `
+                    <div class="modal fade" id="vehicleProductivityModal" tabindex="-1">
+                        <div class="modal-dialog modal-lg">
+                            <div class="modal-content">
+                                <div class="modal-header bg-info text-white">
+                                    <h5 class="modal-title">Vehicle Productivity Ranking (${days} days)</h5>
+                                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                                </div>
+                                <div class="modal-body">${html}</div>
+                                <div class="modal-footer">
+                                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+                $('body').append(modal);
+                new bootstrap.Modal(document.getElementById('vehicleProductivityModal')).show();
+            }
+        },
+        error: function() {
+            alert('Failed to fetch vehicle productivity ranking.');
+        }
+    });
+}
+
+function viewProductivityRecommendations() {
+    const days = prompt('Recommendation window (days):', '30');
+    if (!days || isNaN(days) || days < 1 || days > 180) return;
+
+    $.ajax({
+        url: `/api/productivity/recommendations?days=${days}`,
+        type: 'GET',
+        success: function(result) {
+            if (result.success) {
+                let items = '';
+                result.recommendations.forEach(rec => {
+                    const badge = rec.priority === 'High' ? 'danger' : rec.priority === 'Medium' ? 'warning' : 'secondary';
+                    items += `
+                        <div class="card border-${badge} mb-2">
+                            <div class="card-body py-2">
+                                <span class="badge bg-${badge}">${rec.priority}</span>
+                                <strong>${rec.title}</strong><br>
+                                <small>${rec.message}</small>
+                            </div>
+                        </div>
+                    `;
+                });
+
+                const html = `
+                    <p><strong>Total Recommendations:</strong> ${result.total_recommendations}</p>
+                    ${items}
+                `;
+
+                $('#productivityRecommendationsModal').remove();
+                const modal = `
+                    <div class="modal fade" id="productivityRecommendationsModal" tabindex="-1">
+                        <div class="modal-dialog modal-lg">
+                            <div class="modal-content">
+                                <div class="modal-header bg-info text-white">
+                                    <h5 class="modal-title">Productivity Recommendations (${days} days)</h5>
+                                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                                </div>
+                                <div class="modal-body">${html}</div>
+                                <div class="modal-footer">
+                                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+                $('body').append(modal);
+                new bootstrap.Modal(document.getElementById('productivityRecommendationsModal')).show();
+            }
+        },
+        error: function() {
+            alert('Failed to fetch productivity recommendations.');
+        }
+    });
 }
 
 // Service Availability Insights Functions
