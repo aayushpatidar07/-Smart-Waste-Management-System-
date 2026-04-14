@@ -1253,7 +1253,7 @@ def api_get_active_alerts():
 @app.route('/api/alerts/<int:alert_id>/resolve', methods=['POST'])
 @login_required
 @role_required(['admin', 'staff'])
-def api_resolve_alert(alert_id):
+def api_resolve_collection_alert(alert_id):
     """Mark an alert as resolved."""
     try:
         data = request.get_json() or {}
