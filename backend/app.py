@@ -45,6 +45,7 @@ from real_time_alerts import RealTimeAlertsService
 from compliance_reporting import ComplianceReportingService
 from collection_productivity import CollectionProductivityService
 from service_availability import ServiceAvailabilityService
+from waste_audit_insights import WasteAuditInsightsService
 
 # Load environment variables
 load_dotenv()
@@ -2439,6 +2440,91 @@ def get_productivity_recommendations():
             return jsonify({'success': False, 'message': 'days must be between 1 and 180'}), 400
 
         result = CollectionProductivityService().get_productivity_recommendations(days)
+        return jsonify(result), (200 if result.get('success') else 400)
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+# =============================================
+# WASTE AUDIT INSIGHTS
+# =============================================
+
+@app.route('/api/audit/summary', methods=['GET'])
+@login_required
+def get_waste_audit_summary():
+    """Get waste audit summary metrics."""
+    try:
+        days = int(request.args.get('days', 30))
+        if days < 1 or days > 180:
+            return jsonify({'success': False, 'message': 'days must be between 1 and 180'}), 400
+
+        result = WasteAuditInsightsService().get_audit_summary(days)
+        return jsonify(result), (200 if result.get('success') else 400)
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+@app.route('/api/audit/zones', methods=['GET'])
+@login_required
+def get_waste_audit_zone_ranking():
+    """Get zone-level audit ranking."""
+    try:
+        days = int(request.args.get('days', 30))
+        limit = int(request.args.get('limit', 8))
+        if days < 1 or days > 180:
+            return jsonify({'success': False, 'message': 'days must be between 1 and 180'}), 400
+        if limit < 1 or limit > 20:
+            return jsonify({'success': False, 'message': 'limit must be between 1 and 20'}), 400
+
+        result = WasteAuditInsightsService().get_zone_audit_ranking(days, limit)
+        return jsonify(result), (200 if result.get('success') else 400)
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+@app.route('/api/audit/timeline', methods=['GET'])
+@login_required
+def get_waste_audit_timeline():
+    """Get daily audit resolution timeline."""
+    try:
+        days = int(request.args.get('days', 30))
+        if days < 1 or days > 180:
+            return jsonify({'success': False, 'message': 'days must be between 1 and 180'}), 400
+
+        result = WasteAuditInsightsService().get_resolution_timeline(days)
+        return jsonify(result), (200 if result.get('success') else 400)
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+@app.route('/api/audit/backlog', methods=['GET'])
+@login_required
+def get_waste_audit_backlog():
+    """Get important unresolved audit items."""
+    try:
+        days = int(request.args.get('days', 30))
+        limit = int(request.args.get('limit', 10))
+        if days < 1 or days > 180:
+            return jsonify({'success': False, 'message': 'days must be between 1 and 180'}), 400
+        if limit < 1 or limit > 25:
+            return jsonify({'success': False, 'message': 'limit must be between 1 and 25'}), 400
+
+        result = WasteAuditInsightsService().get_backlog_items(days, limit)
+        return jsonify(result), (200 if result.get('success') else 400)
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+@app.route('/api/audit/recommendations', methods=['GET'])
+@login_required
+def get_waste_audit_recommendations():
+    """Get waste audit improvement recommendations."""
+    try:
+        days = int(request.args.get('days', 30))
+        if days < 1 or days > 180:
+            return jsonify({'success': False, 'message': 'days must be between 1 and 180'}), 400
+
+        result = WasteAuditInsightsService().get_audit_recommendations(days)
         return jsonify(result), (200 if result.get('success') else 400)
     except Exception as e:
         return jsonify({'success': False, 'error': str(e)}), 500

@@ -392,6 +392,31 @@
         </div>
     </div>
 
+    <!-- Waste Audit Insights Section -->
+    <div class="row g-3 mb-4">
+        <div class="col-12">
+            <div class="card border-secondary">
+                <div class="card-header bg-secondary text-white d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0"><i class="bi bi-clipboard-data"></i> Waste Audit Insights</h5>
+                    <div>
+                        <button class="btn btn-sm btn-light" onclick="viewAuditSummary()">
+                            <i class="bi bi-pie-chart"></i> Summary
+                        </button>
+                        <button class="btn btn-sm btn-light" onclick="viewAuditZones()">
+                            <i class="bi bi-map"></i> Zone Ranking
+                        </button>
+                        <button class="btn btn-sm btn-light" onclick="viewAuditBacklog()">
+                            <i class="bi bi-inbox"></i> Backlog
+                        </button>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <p class="text-muted"><i class="bi bi-info-circle"></i> Review waste report compliance, audit backlog, zone risk, and resolution trends for operational governance.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- Predictive Analytics Section -->
     <div class="row g-3 mb-4">
         <div class="col-12">
@@ -1909,6 +1934,173 @@ function viewProductivityRecommendations() {
         },
         error: function() {
             alert('Failed to fetch productivity recommendations.');
+        }
+    });
+}
+
+// Waste Audit Insights Functions
+
+function viewAuditSummary() {
+    const days = prompt('Audit window (days):', '30');
+    if (!days || isNaN(days) || days < 1 || days > 180) return;
+
+    $.ajax({
+        url: `/api/audit/summary?days=${days}`,
+        type: 'GET',
+        success: function(result) {
+            if (result.success) {
+                const statusColor = result.status === 'PASS' ? 'success' : result.status === 'WATCH' ? 'warning' : 'danger';
+                const html = `
+                    <div class="mb-3">
+                        <h6>Audit Score</h6>
+                        <div class="progress mb-2">
+                            <div class="progress-bar bg-${statusColor}" style="width: ${result.audit_score}%"></div>
+                        </div>
+                        <p><strong>${result.audit_score}%</strong> <span class="badge bg-${statusColor}">${result.status}</span></p>
+                    </div>
+                    <div class="row text-center mb-3">
+                        <div class="col-6 col-md-3"><small class="text-muted d-block">Total</small><strong>${result.total_reports}</strong></div>
+                        <div class="col-6 col-md-3"><small class="text-muted d-block">Pending</small><strong>${result.pending_reports}</strong></div>
+                        <div class="col-6 col-md-3"><small class="text-muted d-block">Resolved</small><strong>${result.resolved_reports}</strong></div>
+                        <div class="col-6 col-md-3"><small class="text-muted d-block">Critical</small><strong>${result.critical_reports}</strong></div>
+                    </div>
+                    <p><strong>Resolution Rate:</strong> ${result.resolution_rate_percent}%</p>
+                    <p class="mb-0"><strong>Avg Resolution:</strong> ${result.avg_resolution_hours} hours</p>
+                `;
+
+                $('#auditSummaryModal').remove();
+                const modal = `
+                    <div class="modal fade" id="auditSummaryModal" tabindex="-1">
+                        <div class="modal-dialog">
+                            <div class="modal-content">
+                                <div class="modal-header bg-secondary text-white">
+                                    <h5 class="modal-title">Waste Audit Summary (${days} days)</h5>
+                                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                                </div>
+                                <div class="modal-body">${html}</div>
+                                <div class="modal-footer">
+                                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+                $('body').append(modal);
+                new bootstrap.Modal(document.getElementById('auditSummaryModal')).show();
+            }
+        },
+        error: function() {
+            alert('Failed to fetch audit summary.');
+        }
+    });
+}
+
+function viewAuditZones() {
+    const days = prompt('Zone audit window (days):', '30');
+    if (!days || isNaN(days) || days < 1 || days > 180) return;
+
+    $.ajax({
+        url: `/api/audit/zones?days=${days}&limit=10`,
+        type: 'GET',
+        success: function(result) {
+            if (result.success) {
+                let rows = '';
+                result.zones.forEach(zone => {
+                    const badge = zone.risk_score >= 60 ? 'danger' : zone.risk_score >= 35 ? 'warning' : 'success';
+                    rows += `
+                        <tr>
+                            <td>${zone.zone}</td>
+                            <td>${zone.total_reports}</td>
+                            <td>${zone.pending_reports}</td>
+                            <td>${zone.resolved_reports}</td>
+                            <td>${zone.resolution_rate_percent}%</td>
+                            <td><span class="badge bg-${badge}">${zone.risk_score}</span></td>
+                        </tr>
+                    `;
+                });
+
+                const html = `
+                    <table class="table table-sm">
+                        <thead><tr><th>Zone</th><th>Total</th><th>Pending</th><th>Resolved</th><th>Resolution %</th><th>Risk</th></tr></thead>
+                        <tbody>${rows}</tbody>
+                    </table>
+                `;
+
+                $('#auditZonesModal').remove();
+                const modal = `
+                    <div class="modal fade" id="auditZonesModal" tabindex="-1">
+                        <div class="modal-dialog modal-lg">
+                            <div class="modal-content">
+                                <div class="modal-header bg-secondary text-white">
+                                    <h5 class="modal-title">Zone Audit Ranking (${days} days)</h5>
+                                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                                </div>
+                                <div class="modal-body">${html}</div>
+                                <div class="modal-footer">
+                                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+                $('body').append(modal);
+                new bootstrap.Modal(document.getElementById('auditZonesModal')).show();
+            }
+        },
+        error: function() {
+            alert('Failed to fetch zone audit ranking.');
+        }
+    });
+}
+
+function viewAuditBacklog() {
+    const days = prompt('Backlog window (days):', '30');
+    if (!days || isNaN(days) || days < 1 || days > 180) return;
+
+    $.ajax({
+        url: `/api/audit/backlog?days=${days}&limit=10`,
+        type: 'GET',
+        success: function(result) {
+            if (result.success) {
+                let backlogHtml = '';
+                result.backlog.forEach(item => {
+                    backlogHtml += `
+                        <div class="card mb-2 border-warning">
+                            <div class="card-body py-2">
+                                <span class="badge bg-warning text-dark">${item.priority}</span>
+                                <strong>${item.report_type}</strong> - ${item.zone}<br>
+                                <small>${item.location || 'No location provided'}</small><br>
+                                <small class="text-muted">Reported: ${item.reported_at}</small>
+                            </div>
+                        </div>
+                    `;
+                });
+
+                const html = backlogHtml || '<p class="text-muted mb-0">No unresolved audit backlog found for this period.</p>';
+
+                $('#auditBacklogModal').remove();
+                const modal = `
+                    <div class="modal fade" id="auditBacklogModal" tabindex="-1">
+                        <div class="modal-dialog modal-lg">
+                            <div class="modal-content">
+                                <div class="modal-header bg-secondary text-white">
+                                    <h5 class="modal-title">Audit Backlog (${days} days)</h5>
+                                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                                </div>
+                                <div class="modal-body">${html}</div>
+                                <div class="modal-footer">
+                                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+                $('body').append(modal);
+                new bootstrap.Modal(document.getElementById('auditBacklogModal')).show();
+            }
+        },
+        error: function() {
+            alert('Failed to fetch audit backlog.');
         }
     });
 }
