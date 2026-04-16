@@ -46,6 +46,7 @@ from compliance_reporting import ComplianceReportingService
 from collection_productivity import CollectionProductivityService
 from service_availability import ServiceAvailabilityService
 from waste_audit_insights import WasteAuditInsightsService
+from cost_analytics import CostAnalyticsService
 
 # Load environment variables
 load_dotenv()
@@ -2525,6 +2526,85 @@ def get_waste_audit_recommendations():
             return jsonify({'success': False, 'message': 'days must be between 1 and 180'}), 400
 
         result = WasteAuditInsightsService().get_audit_recommendations(days)
+        return jsonify(result), (200 if result.get('success') else 400)
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+# =============================================
+# COST ANALYTICS
+# =============================================
+
+@app.route('/api/costs/summary', methods=['GET'])
+@login_required
+def get_cost_summary():
+    """Get overall cost summary."""
+    try:
+        days = int(request.args.get('days', 30))
+        if days < 1 or days > 180:
+            return jsonify({'success': False, 'message': 'days must be between 1 and 180'}), 400
+
+        result = CostAnalyticsService().get_cost_summary(days)
+        return jsonify(result), (200 if result.get('success') else 400)
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+@app.route('/api/costs/by-vehicle', methods=['GET'])
+@login_required
+def get_cost_by_vehicle():
+    """Get cost breakdown by vehicle."""
+    try:
+        days = int(request.args.get('days', 30))
+        if days < 1 or days > 180:
+            return jsonify({'success': False, 'message': 'days must be between 1 and 180'}), 400
+
+        result = CostAnalyticsService().get_cost_by_vehicle(days)
+        return jsonify(result), (200 if result.get('success') else 400)
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+@app.route('/api/costs/by-zone', methods=['GET'])
+@login_required
+def get_cost_by_zone():
+    """Get cost breakdown by zone."""
+    try:
+        days = int(request.args.get('days', 30))
+        if days < 1 or days > 180:
+            return jsonify({'success': False, 'message': 'days must be between 1 and 180'}), 400
+
+        result = CostAnalyticsService().get_cost_by_zone(days)
+        return jsonify(result), (200 if result.get('success') else 400)
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+@app.route('/api/costs/trends', methods=['GET'])
+@login_required
+def get_cost_trends():
+    """Get cost trends over time."""
+    try:
+        days = int(request.args.get('days', 30))
+        if days < 1 or days > 180:
+            return jsonify({'success': False, 'message': 'days must be between 1 and 180'}), 400
+
+        result = CostAnalyticsService().get_cost_trends(days)
+        return jsonify(result), (200 if result.get('success') else 400)
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+@app.route('/api/costs/recommendations', methods=['GET'])
+@login_required
+def get_cost_recommendations():
+    """Get cost optimization recommendations."""
+    try:
+        days = int(request.args.get('days', 30))
+        if days < 1 or days > 180:
+            return jsonify({'success': False, 'message': 'days must be between 1 and 180'}), 400
+
+        result = CostAnalyticsService().get_cost_efficiency_recommendations(days)
         return jsonify(result), (200 if result.get('success') else 400)
     except Exception as e:
         return jsonify({'success': False, 'error': str(e)}), 500

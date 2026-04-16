@@ -417,6 +417,31 @@
         </div>
     </div>
 
+    <!-- Cost Analytics Section -->
+    <div class="row g-3 mb-4">
+        <div class="col-12">
+            <div class="card border-warning">
+                <div class="card-header bg-warning text-dark d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0"><i class="bi bi-cash-flow"></i> Cost Analytics</h5>
+                    <div>
+                        <button class="btn btn-sm btn-dark" onclick="viewCostSummary()">
+                            <i class="bi bi-calculator"></i> Summary
+                        </button>
+                        <button class="btn btn-sm btn-dark" onclick="viewCostByVehicle()">
+                            <i class="bi bi-truck"></i> By Vehicle
+                        </button>
+                        <button class="btn btn-sm btn-dark" onclick="viewCostByZone()">
+                            <i class="bi bi-geo-alt"></i> By Zone
+                        </button>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <p class="text-muted"><i class="bi bi-info-circle"></i> Track operational costs, vehicle expenses, labor costs, and identify cost optimization opportunities.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- Predictive Analytics Section -->
     <div class="row g-3 mb-4">
         <div class="col-12">
@@ -2101,6 +2126,186 @@ function viewAuditBacklog() {
         },
         error: function() {
             alert('Failed to fetch audit backlog.');
+        }
+    });
+}
+
+// Cost Analytics Functions
+
+function viewCostSummary() {
+    const days = prompt('Cost window (days):', '30');
+    if (!days || isNaN(days) || days < 1 || days > 180) return;
+
+    $.ajax({
+        url: `/api/costs/summary?days=${days}`,
+        type: 'GET',
+        success: function(result) {
+            if (result.success) {
+                const html = `
+                    <div class="mb-3">
+                        <div class="row text-center">
+                            <div class="col-md-4 mb-3">
+                                <h6>Total Cost</h6>
+                                <strong class="text-danger">$${result.total_operational_cost.toLocaleString()}</strong>
+                            </div>
+                            <div class="col-md-4 mb-3">
+                                <h6>Cost/Collection</h6>
+                                <strong>$${result.cost_per_collection.toLocaleString()}</strong>
+                            </div>
+                            <div class="col-md-4 mb-3">
+                                <h6>Cost/kg</h6>
+                                <strong>$${result.cost_per_kg_waste.toFixed(4)}</strong>
+                            </div>
+                        </div>
+                        <hr>
+                        <div class="row text-center text-muted mb-3">
+                            <div class="col-6"><small>Vehicle Ops: $${result.vehicle_operations_cost.toLocaleString()}</small></div>
+                            <div class="col-6"><small>Fuel: $${result.fuel_cost.toLocaleString()}</small></div>
+                            <div class="col-6"><small>Maintenance: $${result.maintenance_cost.toLocaleString()}</small></div>
+                            <div class="col-6"><small>Labor: $${result.labor_cost.toLocaleString()}</small></div>
+                        </div>
+                        <p><strong>Collections:</strong> ${result.total_collections} | <strong>Waste:</strong> ${result.total_waste_kg.toLocaleString()} kg</p>
+                        <p><strong>Vehicles:</strong> ${result.vehicles_used} | <strong>Staff:</strong> ${result.staff_deployed}</p>
+                    </div>
+                `;
+
+                $('#costSummaryModal').remove();
+                const modal = `
+                    <div class="modal fade" id="costSummaryModal" tabindex="-1">
+                        <div class="modal-dialog">
+                            <div class="modal-content">
+                                <div class="modal-header bg-warning text-dark">
+                                    <h5 class="modal-title">Cost Summary (${days} days)</h5>
+                                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                                </div>
+                                <div class="modal-body">${html}</div>
+                                <div class="modal-footer">
+                                    <button type="button" class="btn btn-warning" data-bs-dismiss="modal">Close</button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+                $('body').append(modal);
+                new bootstrap.Modal(document.getElementById('costSummaryModal')).show();
+            }
+        },
+        error: function() {
+            alert('Failed to fetch cost summary.');
+        }
+    });
+}
+
+function viewCostByVehicle() {
+    const days = prompt('Cost window (days):', '30');
+    if (!days || isNaN(days) || days < 1 || days > 180) return;
+
+    $.ajax({
+        url: `/api/costs/by-vehicle?days=${days}`,
+        type: 'GET',
+        success: function(result) {
+            if (result.success) {
+                let rows = '';
+                result.breakdown.forEach(item => {
+                    rows += `
+                        <tr>
+                            <td>${item.vehicle_name}</td>
+                            <td>${item.vehicle_type}</td>
+                            <td>${item.collections}</td>
+                            <td>${item.total_distance_km.toLocaleString()}</td>
+                            <td>$${item.total_cost.toLocaleString()}</td>
+                            <td>$${item.cost_per_collection}</td>
+                        </tr>
+                    `;
+                });
+
+                const html = `
+                    <table class="table table-sm">
+                        <thead><tr><th>Vehicle</th><th>Type</th><th>Collections</th><th>Distance (km)</th><th>Total Cost</th><th>Cost/Collect</th></tr></thead>
+                        <tbody>${rows}</tbody>
+                    </table>
+                `;
+
+                $('#costVehicleModal').remove();
+                const modal = `
+                    <div class="modal fade" id="costVehicleModal" tabindex="-1">
+                        <div class="modal-dialog modal-lg">
+                            <div class="modal-content">
+                                <div class="modal-header bg-warning text-dark">
+                                    <h5 class="modal-title">Cost by Vehicle (${days} days)</h5>
+                                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                                </div>
+                                <div class="modal-body">${html}</div>
+                                <div class="modal-footer">
+                                    <button type="button" class="btn btn-warning" data-bs-dismiss="modal">Close</button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+                $('body').append(modal);
+                new bootstrap.Modal(document.getElementById('costVehicleModal')).show();
+            }
+        },
+        error: function() {
+            alert('Failed to fetch vehicle costs.');
+        }
+    });
+}
+
+function viewCostByZone() {
+    const days = prompt('Cost window (days):', '30');
+    if (!days || isNaN(days) || days < 1 || days > 180) return;
+
+    $.ajax({
+        url: `/api/costs/by-zone?days=${days}`,
+        type: 'GET',
+        success: function(result) {
+            if (result.success) {
+                let rows = '';
+                result.breakdown.forEach(item => {
+                    rows += `
+                        <tr>
+                            <td>${item.zone}</td>
+                            <td>${item.collections}</td>
+                            <td>${item.waste_kg.toLocaleString()}</td>
+                            <td>${item.vehicles_deployed}</td>
+                            <td>$${item.total_zone_cost.toLocaleString()}</td>
+                            <td>$${item.cost_per_kg.toFixed(4)}</td>
+                        </tr>
+                    `;
+                });
+
+                const html = `
+                    <table class="table table-sm">
+                        <thead><tr><th>Zone</th><th>Collections</th><th>Waste (kg)</th><th>Vehicles</th><th>Zone Cost</th><th>Cost/kg</th></tr></thead>
+                        <tbody>${rows}</tbody>
+                    </table>
+                `;
+
+                $('#costZoneModal').remove();
+                const modal = `
+                    <div class="modal fade" id="costZoneModal" tabindex="-1">
+                        <div class="modal-dialog modal-lg">
+                            <div class="modal-content">
+                                <div class="modal-header bg-warning text-dark">
+                                    <h5 class="modal-title">Cost by Zone (${days} days)</h5>
+                                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                                </div>
+                                <div class="modal-body">${html}</div>
+                                <div class="modal-footer">
+                                    <button type="button" class="btn btn-warning" data-bs-dismiss="modal">Close</button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+                $('body').append(modal);
+                new bootstrap.Modal(document.getElementById('costZoneModal')).show();
+            }
+        },
+        error: function() {
+            alert('Failed to fetch zone costs.');
         }
     });
 }
