@@ -442,6 +442,31 @@
         </div>
     </div>
 
+    <!-- Staff Performance Analytics Section -->
+    <div class="row g-3 mb-4">
+        <div class="col-12">
+            <div class="card border-danger">
+                <div class="card-header bg-danger text-white d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0"><i class="bi bi-people-fill"></i> Staff Performance</h5>
+                    <div>
+                        <button class="btn btn-sm btn-light" onclick="viewStaffOverview()">
+                            <i class="bi bi-graph-up"></i> Overview
+                        </button>
+                        <button class="btn btn-sm btn-light" onclick="viewTopPerformers()">
+                            <i class="bi bi-star"></i> Top Performers
+                        </button>
+                        <button class="btn btn-sm btn-light" onclick="viewStaffRatings()">
+                            <i class="bi bi-medal"></i> Leaderboard
+                        </button>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <p class="text-muted"><i class="bi bi-info-circle"></i> Monitor staff efficiency, collection performance, individual metrics, and identify top performers.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- Predictive Analytics Section -->
     <div class="row g-3 mb-4">
         <div class="col-12">
@@ -2304,6 +2329,207 @@ function viewSustainabilityTrends() {
         },
         error: function() {
             alert('Failed to fetch sustainability trends.');
+        }
+    });
+}
+
+// Staff Performance Analytics Functions
+
+function viewStaffOverview() {
+    const days = prompt('Performance window (days):', '30');
+    if (!days || isNaN(days) || days < 1 || days > 180) return;
+
+    $.ajax({
+        url: `/api/staff/overview?days=${days}`,
+        type: 'GET',
+        success: function(result) {
+            if (result.success) {
+                const html = `
+                    <div class="mb-3">
+                        <div class="row text-center">
+                            <div class="col-md-3 mb-3">
+                                <h6>Total Staff</h6>
+                                <strong>${result.total_staff}</strong>
+                            </div>
+                            <div class="col-md-3 mb-3">
+                                <h6>Active Staff</h6>
+                                <strong class="text-success">${result.active_staff}</strong>
+                            </div>
+                            <div class="col-md-3 mb-3">
+                                <h6>Collection Staff</h6>
+                                <strong>${result.collection_staff}</strong>
+                            </div>
+                            <div class="col-md-3 mb-3">
+                                <h6>Drivers</h6>
+                                <strong>${result.drivers}</strong>
+                            </div>
+                        </div>
+                        <hr>
+                        <div class="row text-center">
+                            <div class="col-md-4 mb-3">
+                                <small class="text-muted d-block">Total Collections</small>
+                                <strong>${result.total_collections.toLocaleString()}</strong>
+                            </div>
+                            <div class="col-md-4 mb-3">
+                                <small class="text-muted d-block">Avg Weight/Collection</small>
+                                <strong>${result.avg_weight_per_collection} kg</strong>
+                            </div>
+                            <div class="col-md-4 mb-3">
+                                <small class="text-muted d-block">Total Weight</small>
+                                <strong>${result.total_weight_handled.toLocaleString()} kg</strong>
+                            </div>
+                        </div>
+                    </div>
+                `;
+
+                $('#staffOverviewModal').remove();
+                const modal = `
+                    <div class="modal fade" id="staffOverviewModal" tabindex="-1">
+                        <div class="modal-dialog">
+                            <div class="modal-content">
+                                <div class="modal-header bg-danger text-white">
+                                    <h5 class="modal-title">Staff Overview (${days} days)</h5>
+                                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                                </div>
+                                <div class="modal-body">${html}</div>
+                                <div class="modal-footer">
+                                    <button type="button" class="btn btn-danger" data-bs-dismiss="modal">Close</button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+                $('body').append(modal);
+                new bootstrap.Modal(document.getElementById('staffOverviewModal')).show();
+            }
+        },
+        error: function() {
+            alert('Failed to fetch staff overview.');
+        }
+    });
+}
+
+function viewTopPerformers() {
+    const days = prompt('Performance window (days):', '30');
+    if (!days || isNaN(days) || days < 1 || days > 180) return;
+
+    $.ajax({
+        url: `/api/staff/top-performers?days=${days}&limit=10`,
+        type: 'GET',
+        success: function(result) {
+            if (result.success) {
+                let rows = '';
+                result.top_performers.forEach((perf, idx) => {
+                    rows += `
+                        <tr>
+                            <td>${idx + 1}</td>
+                            <td>${perf.staff_name}</td>
+                            <td>${perf.role}</td>
+                            <td>${perf.total_collections}</td>
+                            <td>${perf.total_weight_kg.toLocaleString()} kg</td>
+                            <td>${perf.avg_per_collection_kg}</td>
+                            <td><span class="badge bg-success">${perf.efficiency_score}</span></td>
+                        </tr>
+                    `;
+                });
+
+                const html = `
+                    <table class="table table-sm">
+                        <thead><tr><th>#</th><th>Staff Name</th><th>Role</th><th>Collections</th><th>Total Weight</th><th>Avg/Collection</th><th>Efficiency</th></tr></thead>
+                        <tbody>${rows}</tbody>
+                    </table>
+                `;
+
+                $('#topPerformersModal').remove();
+                const modal = `
+                    <div class="modal fade" id="topPerformersModal" tabindex="-1">
+                        <div class="modal-dialog modal-lg">
+                            <div class="modal-content">
+                                <div class="modal-header bg-danger text-white">
+                                    <h5 class="modal-title">Top Performers (${days} days)</h5>
+                                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                                </div>
+                                <div class="modal-body">${html}</div>
+                                <div class="modal-footer">
+                                    <button type="button" class="btn btn-danger" data-bs-dismiss="modal">Close</button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+                $('body').append(modal);
+                new bootstrap.Modal(document.getElementById('topPerformersModal')).show();
+            }
+        },
+        error: function() {
+            alert('Failed to fetch top performers.');
+        }
+    });
+}
+
+function viewStaffRatings() {
+    const days = prompt('Rating window (days):', '30');
+    if (!days || isNaN(days) || days < 1 || days > 180) return;
+
+    $.ajax({
+        url: `/api/staff/ratings?days=${days}`,
+        type: 'GET',
+        success: function(result) {
+            if (result.success) {
+                let rows = '';
+                result.ratings.forEach((rating, idx) => {
+                    let medalIcon = '🥇';
+                    let medalClass = 'warning';
+                    if (rating.rank === 'Silver') {
+                        medalIcon = '🥈';
+                        medalClass = 'secondary';
+                    } else if (rating.rank === 'Bronze') {
+                        medalIcon = '🥉';
+                        medalClass = 'info';
+                    }
+                    
+                    rows += `
+                        <tr>
+                            <td>${medalIcon} ${rating.staff_name}</td>
+                            <td>${rating.assignments}</td>
+                            <td>${rating.successful_assignments}</td>
+                            <td>${rating.completion_rate}%</td>
+                            <td>${rating.avg_weight_kg} kg</td>
+                            <td><strong class="text-${medalClass}">${rating.rating}/100</strong></td>
+                        </tr>
+                    `;
+                });
+
+                const html = `
+                    <table class="table table-sm">
+                        <thead><tr><th>Staff Name</th><th>Assignments</th><th>Successful</th><th>Completion %</th><th>Avg Weight</th><th>Rating</th></tr></thead>
+                        <tbody>${rows}</tbody>
+                    </table>
+                `;
+
+                $('#ratingsModal').remove();
+                const modal = `
+                    <div class="modal fade" id="ratingsModal" tabindex="-1">
+                        <div class="modal-dialog modal-lg">
+                            <div class="modal-content">
+                                <div class="modal-header bg-danger text-white">
+                                    <h5 class="modal-title">Staff Leaderboard (${days} days)</h5>
+                                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                                </div>
+                                <div class="modal-body">${html}</div>
+                                <div class="modal-footer">
+                                    <button type="button" class="btn btn-danger" data-bs-dismiss="modal">Close</button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+                $('body').append(modal);
+                new bootstrap.Modal(document.getElementById('ratingsModal')).show();
+            }
+        },
+        error: function() {
+            alert('Failed to fetch staff ratings.');
         }
     });
 }

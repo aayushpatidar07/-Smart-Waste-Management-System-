@@ -47,6 +47,7 @@ from collection_productivity import CollectionProductivityService
 from service_availability import ServiceAvailabilityService
 from waste_audit_insights import WasteAuditInsightsService
 from environmental_impact_insights import EnvironmentalImpactService
+from staff_performance import StaffPerformanceService
 
 # Load environment variables
 load_dotenv()
@@ -2605,6 +2606,103 @@ def get_environmental_recommendations():
             return jsonify({'success': False, 'message': 'days must be between 1 and 180'}), 400
 
         result = EnvironmentalImpactService().get_sustainability_recommendations(days)
+        return jsonify(result), (200 if result.get('success') else 400)
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+# =============================================
+# STAFF PERFORMANCE ANALYTICS
+# =============================================
+
+@app.route('/api/staff/overview', methods=['GET'])
+@login_required
+def get_staff_overview():
+    """Get staff performance overview."""
+    try:
+        days = int(request.args.get('days', 30))
+        if days < 1 or days > 180:
+            return jsonify({'success': False, 'message': 'days must be between 1 and 180'}), 400
+
+        result = StaffPerformanceService().get_staff_overview(days)
+        return jsonify(result), (200 if result.get('success') else 400)
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+@app.route('/api/staff/top-performers', methods=['GET'])
+@login_required
+def get_top_performers():
+    """Get top performing staff."""
+    try:
+        days = int(request.args.get('days', 30))
+        limit = int(request.args.get('limit', 10))
+        if days < 1 or days > 180:
+            return jsonify({'success': False, 'message': 'days must be between 1 and 180'}), 400
+        if limit < 1 or limit > 25:
+            return jsonify({'success': False, 'message': 'limit must be between 1 and 25'}), 400
+
+        result = StaffPerformanceService().get_top_performers(days, limit)
+        return jsonify(result), (200 if result.get('success') else 400)
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+@app.route('/api/staff/efficiency-metrics', methods=['GET'])
+@login_required
+def get_efficiency_metrics():
+    """Get staff efficiency metrics."""
+    try:
+        days = int(request.args.get('days', 30))
+        if days < 1 or days > 180:
+            return jsonify({'success': False, 'message': 'days must be between 1 and 180'}), 400
+
+        result = StaffPerformanceService().get_staff_efficiency_metrics(days)
+        return jsonify(result), (200 if result.get('success') else 400)
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+@app.route('/api/staff/performance-trends', methods=['GET'])
+@login_required
+def get_performance_trends():
+    """Get daily performance trends."""
+    try:
+        days = int(request.args.get('days', 30))
+        if days < 1 or days > 180:
+            return jsonify({'success': False, 'message': 'days must be between 1 and 180'}), 400
+
+        result = StaffPerformanceService().get_performance_trends(days)
+        return jsonify(result), (200 if result.get('success') else 400)
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+@app.route('/api/staff/ratings', methods=['GET'])
+@login_required
+def get_staff_ratings():
+    """Get staff ratings leaderboard."""
+    try:
+        days = int(request.args.get('days', 30))
+        if days < 1 or days > 180:
+            return jsonify({'success': False, 'message': 'days must be between 1 and 180'}), 400
+
+        result = StaffPerformanceService().get_staff_ratings(days)
+        return jsonify(result), (200 if result.get('success') else 400)
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+@app.route('/api/staff/recommendations', methods=['GET'])
+@login_required
+def get_staff_recommendations():
+    """Get staff performance recommendations."""
+    try:
+        days = int(request.args.get('days', 30))
+        if days < 1 or days > 180:
+            return jsonify({'success': False, 'message': 'days must be between 1 and 180'}), 400
+
+        result = StaffPerformanceService().get_performance_recommendations(days)
         return jsonify(result), (200 if result.get('success') else 400)
     except Exception as e:
         return jsonify({'success': False, 'error': str(e)}), 500
