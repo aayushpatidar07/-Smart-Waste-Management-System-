@@ -47,6 +47,7 @@ from collection_productivity import CollectionProductivityService
 from service_availability import ServiceAvailabilityService
 from waste_audit_insights import WasteAuditInsightsService
 from environmental_impact_insights import EnvironmentalImpactService
+from vehicle_maintenance_insights import VehicleMaintenanceService
 
 # Load environment variables
 load_dotenv()
@@ -2605,6 +2606,84 @@ def get_environmental_recommendations():
             return jsonify({'success': False, 'message': 'days must be between 1 and 180'}), 400
 
         result = EnvironmentalImpactService().get_sustainability_recommendations(days)
+        return jsonify(result), (200 if result.get('success') else 400)
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+# =============================================
+# VEHICLE MAINTENANCE INSIGHTS
+# =============================================
+
+@app.route('/api/maintenance/overview', methods=['GET'])
+@login_required
+def get_maintenance_overview():
+    """Get vehicle maintenance status overview."""
+    try:
+        result = VehicleMaintenanceService().get_maintenance_overview()
+        return jsonify(result), (200 if result.get('success') else 400)
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+@app.route('/api/maintenance/schedule', methods=['GET'])
+@login_required
+def get_maintenance_schedule():
+    """Get maintenance schedule for vehicles."""
+    try:
+        result = VehicleMaintenanceService().get_maintenance_schedule()
+        return jsonify(result), (200 if result.get('success') else 400)
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+@app.route('/api/maintenance/history', methods=['GET'])
+@login_required
+def get_maintenance_history():
+    """Get vehicle maintenance history."""
+    try:
+        days = int(request.args.get('days', 90))
+        if days < 1 or days > 365:
+            return jsonify({'success': False, 'message': 'days must be between 1 and 365'}), 400
+
+        result = VehicleMaintenanceService().get_maintenance_history(days)
+        return jsonify(result), (200 if result.get('success') else 400)
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+@app.route('/api/maintenance/fleet-health', methods=['GET'])
+@login_required
+def get_fleet_health():
+    """Get overall fleet health metrics."""
+    try:
+        result = VehicleMaintenanceService().get_fleet_health()
+        return jsonify(result), (200 if result.get('success') else 400)
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+@app.route('/api/maintenance/costs', methods=['GET'])
+@login_required
+def get_maintenance_costs():
+    """Get maintenance cost analysis."""
+    try:
+        days = int(request.args.get('days', 90))
+        if days < 1 or days > 365:
+            return jsonify({'success': False, 'message': 'days must be between 1 and 365'}), 400
+
+        result = VehicleMaintenanceService().get_maintenance_costs(days)
+        return jsonify(result), (200 if result.get('success') else 400)
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+@app.route('/api/maintenance/recommendations', methods=['GET'])
+@login_required
+def get_maintenance_recommendations():
+    """Get vehicle maintenance recommendations."""
+    try:
+        result = VehicleMaintenanceService().get_maintenance_recommendations()
         return jsonify(result), (200 if result.get('success') else 400)
     except Exception as e:
         return jsonify({'success': False, 'error': str(e)}), 500
