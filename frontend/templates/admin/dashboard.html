@@ -442,6 +442,31 @@
         </div>
     </div>
 
+    <!-- Vehicle Maintenance Tracking Section -->
+    <div class="row g-3 mb-4">
+        <div class="col-12">
+            <div class="card border-info">
+                <div class="card-header bg-info text-white d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0"><i class="bi bi-hammer"></i> Vehicle Maintenance</h5>
+                    <div>
+                        <button class="btn btn-sm btn-light" onclick="viewMaintenanceOverview()">
+                            <i class="bi bi-speedometer2"></i> Overview
+                        </button>
+                        <button class="btn btn-sm btn-light" onclick="viewMaintenanceSchedule()">
+                            <i class="bi bi-calendar-check"></i> Schedule
+                        </button>
+                        <button class="btn btn-sm btn-light" onclick="viewFleetHealth()">
+                            <i class="bi bi-heart-pulse"></i> Fleet Health
+                        </button>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <p class="text-muted"><i class="bi bi-info-circle"></i> Track vehicle maintenance schedules, fleet health status, maintenance costs, and plan preventive maintenance.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- Predictive Analytics Section -->
     <div class="row g-3 mb-4">
         <div class="col-12">
@@ -2304,6 +2329,183 @@ function viewSustainabilityTrends() {
         },
         error: function() {
             alert('Failed to fetch sustainability trends.');
+        }
+    });
+}
+
+// Vehicle Maintenance Functions
+
+function viewMaintenanceOverview() {
+    $.ajax({
+        url: '/api/maintenance/overview',
+        type: 'GET',
+        success: function(result) {
+            if (result.success) {
+                const html = `
+                    <div class="mb-3">
+                        <div class="row text-center">
+                            <div class="col-md-3 mb-3">
+                                <h6>Total Vehicles</h6>
+                                <strong>${result.total_vehicles}</strong>
+                            </div>
+                            <div class="col-md-3 mb-3">
+                                <h6>Active Vehicles</h6>
+                                <strong class="text-success">${result.active_vehicles}</strong>
+                            </div>
+                            <div class="col-md-3 mb-3">
+                                <h6>In Maintenance</h6>
+                                <strong class="text-warning">${result.in_maintenance}</strong>
+                            </div>
+                            <div class="col-md-3 mb-3">
+                                <h6>Retired</h6>
+                                <strong class="text-muted">${result.retired_vehicles}</strong>
+                            </div>
+                        </div>
+                        <hr>
+                        <p class="text-danger"><i class="bi bi-exclamation-triangle"></i> <strong>Upcoming Maintenance:</strong> ${result.upcoming_maintenance_count} vehicles</p>
+                    </div>
+                `;
+
+                $('#maintenanceOverviewModal').remove();
+                const modal = `
+                    <div class="modal fade" id="maintenanceOverviewModal" tabindex="-1">
+                        <div class="modal-dialog">
+                            <div class="modal-content">
+                                <div class="modal-header bg-info text-white">
+                                    <h5 class="modal-title">Maintenance Overview</h5>
+                                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                                </div>
+                                <div class="modal-body">${html}</div>
+                                <div class="modal-footer">
+                                    <button type="button" class="btn btn-info" data-bs-dismiss="modal">Close</button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+                $('body').append(modal);
+                new bootstrap.Modal(document.getElementById('maintenanceOverviewModal')).show();
+            }
+        },
+        error: function() {
+            alert('Failed to fetch maintenance overview.');
+        }
+    });
+}
+
+function viewMaintenanceSchedule() {
+    $.ajax({
+        url: '/api/maintenance/schedule',
+        type: 'GET',
+        success: function(result) {
+            if (result.success) {
+                let rows = '';
+                result.schedule.forEach(item => {
+                    const priorityBg = item.priority === 'CRITICAL' ? 'danger' : item.priority === 'HIGH' ? 'warning' : item.priority === 'MEDIUM' ? 'info' : 'secondary';
+                    rows += `
+                        <tr>
+                            <td>${item.vehicle_name}</td>
+                            <td>${item.vehicle_type}</td>
+                            <td>${item.current_mileage_km.toLocaleString()}</td>
+                            <td>${item.km_until_maintenance.toLocaleString()}</td>
+                            <td><span class="badge bg-${priorityBg}">${item.priority}</span></td>
+                            <td>${item.maintenance_percentage}%</td>
+                        </tr>
+                    `;
+                });
+
+                const html = `
+                    <table class="table table-sm">
+                        <thead><tr><th>Vehicle</th><th>Type</th><th>Mileage (km)</th><th>Until Maint. (km)</th><th>Priority</th><th>%</th></tr></thead>
+                        <tbody>${rows}</tbody>
+                    </table>
+                `;
+
+                $('#maintenanceScheduleModal').remove();
+                const modal = `
+                    <div class="modal fade" id="maintenanceScheduleModal" tabindex="-1">
+                        <div class="modal-dialog modal-lg">
+                            <div class="modal-content">
+                                <div class="modal-header bg-info text-white">
+                                    <h5 class="modal-title">Maintenance Schedule</h5>
+                                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                                </div>
+                                <div class="modal-body">${html}</div>
+                                <div class="modal-footer">
+                                    <button type="button" class="btn btn-info" data-bs-dismiss="modal">Close</button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+                $('body').append(modal);
+                new bootstrap.Modal(document.getElementById('maintenanceScheduleModal')).show();
+            }
+        },
+        error: function() {
+            alert('Failed to fetch maintenance schedule.');
+        }
+    });
+}
+
+function viewFleetHealth() {
+    $.ajax({
+        url: '/api/maintenance/fleet-health',
+        type: 'GET',
+        success: function(result) {
+            if (result.success) {
+                const healthColor = result.health_status === 'Excellent' ? 'success' : result.health_status === 'Good' ? 'info' : result.health_status === 'Fair' ? 'warning' : 'danger';
+                const html = `
+                    <div class="mb-3">
+                        <h6>Fleet Health Score</h6>
+                        <div class="progress mb-2">
+                            <div class="progress-bar bg-${healthColor}" style="width: ${result.fleet_health_score}%"></div>
+                        </div>
+                        <p><strong>${result.fleet_health_score}/100</strong> <span class="badge bg-${healthColor}">${result.health_status}</span></p>
+                        <hr>
+                        <div class="row text-center">
+                            <div class="col-md-4 mb-3">
+                                <small class="text-muted d-block">Low Mileage</small>
+                                <strong>${result.low_mileage_vehicles}</strong>
+                            </div>
+                            <div class="col-md-4 mb-3">
+                                <small class="text-muted d-block">Medium Mileage</small>
+                                <strong>${result.medium_mileage_vehicles}</strong>
+                            </div>
+                            <div class="col-md-4 mb-3">
+                                <small class="text-muted d-block">High Mileage</small>
+                                <strong>${result.high_mileage_vehicles}</strong>
+                            </div>
+                        </div>
+                        <hr>
+                        <p><strong>Average Mileage:</strong> ${result.average_mileage_km.toLocaleString()} km</p>
+                        <p class="mb-0"><strong>Max Mileage:</strong> ${result.max_mileage_km.toLocaleString()} km</p>
+                    </div>
+                `;
+
+                $('#fleetHealthModal').remove();
+                const modal = `
+                    <div class="modal fade" id="fleetHealthModal" tabindex="-1">
+                        <div class="modal-dialog">
+                            <div class="modal-content">
+                                <div class="modal-header bg-info text-white">
+                                    <h5 class="modal-title">Fleet Health</h5>
+                                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                                </div>
+                                <div class="modal-body">${html}</div>
+                                <div class="modal-footer">
+                                    <button type="button" class="btn btn-info" data-bs-dismiss="modal">Close</button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+                $('body').append(modal);
+                new bootstrap.Modal(document.getElementById('fleetHealthModal')).show();
+            }
+        },
+        error: function() {
+            alert('Failed to fetch fleet health.');
         }
     });
 }
