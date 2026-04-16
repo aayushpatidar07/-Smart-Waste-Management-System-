@@ -417,6 +417,31 @@
         </div>
     </div>
 
+    <!-- Environmental Impact Insights Section -->
+    <div class="row g-3 mb-4">
+        <div class="col-12">
+            <div class="card border-success">
+                <div class="card-header bg-success text-white d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0"><i class="bi bi-leaf"></i> Environmental Impact</h5>
+                    <div>
+                        <button class="btn btn-sm btn-light" onclick="viewImpactSummary()">
+                            <i class="bi bi-graph-up"></i> Summary
+                        </button>
+                        <button class="btn btn-sm btn-light" onclick="viewCO2Breakdown()">
+                            <i class="bi bi-fuel-pump"></i> CO₂ Breakdown
+                        </button>
+                        <button class="btn btn-sm btn-light" onclick="viewSustainabilityTrends()">
+                            <i class="bi bi-line-chart"></i> Trends
+                        </button>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <p class="text-muted"><i class="bi bi-info-circle"></i> Monitor carbon footprint, waste diversion rates, vehicle emissions, and sustainability improvements.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- Predictive Analytics Section -->
     <div class="row g-3 mb-4">
         <div class="col-12">
@@ -2101,6 +2126,184 @@ function viewAuditBacklog() {
         },
         error: function() {
             alert('Failed to fetch audit backlog.');
+        }
+    });
+}
+
+// Environmental Impact Insights Functions
+
+function viewImpactSummary() {
+    const days = prompt('Impact window (days):', '30');
+    if (!days || isNaN(days) || days < 1 || days > 180) return;
+
+    $.ajax({
+        url: `/api/impact/summary?days=${days}`,
+        type: 'GET',
+        success: function(result) {
+            if (result.success) {
+                const html = `
+                    <div class="mb-3">
+                        <div class="row text-center">
+                            <div class="col-md-6 mb-3">
+                                <h6>Total Waste Collected</h6>
+                                <strong>${result.total_waste_kg.toLocaleString()} kg</strong>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <h6>CO₂ Emissions</h6>
+                                <strong>${result.co2_emissions_kg.toLocaleString()} kg</strong>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <h6>Diverted from Landfill</h6>
+                                <strong>${result.diverted_from_landfill_kg.toLocaleString()} kg</strong>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <h6>Diversion Rate</h6>
+                                <strong>${result.diversion_rate_percent}%</strong>
+                            </div>
+                        </div>
+                        <hr>
+                        <p><strong>Collections:</strong> ${result.total_collections} (${result.successful_collections} successful)</p>
+                        <p><strong>Avg Route Distance:</strong> ${result.avg_collection_distance_km} km</p>
+                        <p><strong>Vehicles Deployed:</strong> ${result.vehicles_deployed}</p>
+                    </div>
+                `;
+
+                $('#impactSummaryModal').remove();
+                const modal = `
+                    <div class="modal fade" id="impactSummaryModal" tabindex="-1">
+                        <div class="modal-dialog">
+                            <div class="modal-content">
+                                <div class="modal-header bg-success text-white">
+                                    <h5 class="modal-title">Environmental Impact Summary (${days} days)</h5>
+                                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                                </div>
+                                <div class="modal-body">${html}</div>
+                                <div class="modal-footer">
+                                    <button type="button" class="btn btn-success" data-bs-dismiss="modal">Close</button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+                $('body').append(modal);
+                new bootstrap.Modal(document.getElementById('impactSummaryModal')).show();
+            }
+        },
+        error: function() {
+            alert('Failed to fetch environmental impact summary.');
+        }
+    });
+}
+
+function viewCO2Breakdown() {
+    const days = prompt('Breakdown window (days):', '30');
+    if (!days || isNaN(days) || days < 1 || days > 180) return;
+
+    $.ajax({
+        url: `/api/impact/co2-breakdown?days=${days}`,
+        type: 'GET',
+        success: function(result) {
+            if (result.success) {
+                let rows = '';
+                result.breakdown.forEach(item => {
+                    rows += `
+                        <tr>
+                            <td>${item.vehicle_type}</td>
+                            <td>${item.collections}</td>
+                            <td>${item.total_distance_km.toLocaleString()}</td>
+                            <td>${item.co2_emissions_kg.toLocaleString()}</td>
+                            <td>${item.co2_per_km} kg/km</td>
+                        </tr>
+                    `;
+                });
+
+                const html = `
+                    <table class="table table-sm">
+                        <thead><tr><th>Vehicle Type</th><th>Collections</th><th>Distance (km)</th><th>CO₂ (kg)</th><th>CO₂/km</th></tr></thead>
+                        <tbody>${rows}</tbody>
+                    </table>
+                `;
+
+                $('#co2Modal').remove();
+                const modal = `
+                    <div class="modal fade" id="co2Modal" tabindex="-1">
+                        <div class="modal-dialog modal-lg">
+                            <div class="modal-content">
+                                <div class="modal-header bg-success text-white">
+                                    <h5 class="modal-title">CO₂ Emissions Breakdown (${days} days)</h5>
+                                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                                </div>
+                                <div class="modal-body">${html}</div>
+                                <div class="modal-footer">
+                                    <button type="button" class="btn btn-success" data-bs-dismiss="modal">Close</button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+                $('body').append(modal);
+                new bootstrap.Modal(document.getElementById('co2Modal')).show();
+            }
+        },
+        error: function() {
+            alert('Failed to fetch CO2 breakdown.');
+        }
+    });
+}
+
+function viewSustainabilityTrends() {
+    const days = prompt('Trends window (days):', '30');
+    if (!days || isNaN(days) || days < 1 || days > 180) return;
+
+    $.ajax({
+        url: `/api/impact/trends?days=${days}`,
+        type: 'GET',
+        success: function(result) {
+            if (result.success) {
+                let rows = '';
+                result.trends.forEach(item => {
+                    rows += `
+                        <tr>
+                            <td>${item.date}</td>
+                            <td>${item.collections}</td>
+                            <td>${item.waste_kg.toLocaleString()}</td>
+                            <td>${item.avg_distance_km}</td>
+                            <td>${item.co2_kg}</td>
+                            <td>${item.efficiency_rate_percent}%</td>
+                        </tr>
+                    `;
+                });
+
+                const html = `
+                    <table class="table table-sm">
+                        <thead><tr><th>Date</th><th>Collections</th><th>Waste (kg)</th><th>Avg Dist (km)</th><th>CO₂ (kg)</th><th>Efficiency</th></tr></thead>
+                        <tbody>${rows}</tbody>
+                    </table>
+                `;
+
+                $('#trendsModal').remove();
+                const modal = `
+                    <div class="modal fade" id="trendsModal" tabindex="-1">
+                        <div class="modal-dialog modal-lg">
+                            <div class="modal-content">
+                                <div class="modal-header bg-success text-white">
+                                    <h5 class="modal-title">Sustainability Trends (${days} days)</h5>
+                                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                                </div>
+                                <div class="modal-body">${html}</div>
+                                <div class="modal-footer">
+                                    <button type="button" class="btn btn-success" data-bs-dismiss="modal">Close</button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+                $('body').append(modal);
+                new bootstrap.Modal(document.getElementById('trendsModal')).show();
+            }
+        },
+        error: function() {
+            alert('Failed to fetch sustainability trends.');
         }
     });
 }

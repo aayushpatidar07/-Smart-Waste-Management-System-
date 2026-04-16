@@ -46,6 +46,7 @@ from compliance_reporting import ComplianceReportingService
 from collection_productivity import CollectionProductivityService
 from service_availability import ServiceAvailabilityService
 from waste_audit_insights import WasteAuditInsightsService
+from environmental_impact_insights import EnvironmentalImpactService
 
 # Load environment variables
 load_dotenv()
@@ -2525,6 +2526,85 @@ def get_waste_audit_recommendations():
             return jsonify({'success': False, 'message': 'days must be between 1 and 180'}), 400
 
         result = WasteAuditInsightsService().get_audit_recommendations(days)
+        return jsonify(result), (200 if result.get('success') else 400)
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+# =============================================
+# ENVIRONMENTAL IMPACT INSIGHTS
+# =============================================
+
+@app.route('/api/impact/summary', methods=['GET'])
+@login_required
+def get_environmental_impact_summary():
+    """Get environmental impact summary."""
+    try:
+        days = int(request.args.get('days', 30))
+        if days < 1 or days > 180:
+            return jsonify({'success': False, 'message': 'days must be between 1 and 180'}), 400
+
+        result = EnvironmentalImpactService().get_impact_summary(days)
+        return jsonify(result), (200 if result.get('success') else 400)
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+@app.route('/api/impact/co2-breakdown', methods=['GET'])
+@login_required
+def get_environmental_co2_breakdown():
+    """Get CO2 emissions breakdown by vehicle type."""
+    try:
+        days = int(request.args.get('days', 30))
+        if days < 1 or days > 180:
+            return jsonify({'success': False, 'message': 'days must be between 1 and 180'}), 400
+
+        result = EnvironmentalImpactService().get_co2_breakdown(days)
+        return jsonify(result), (200 if result.get('success') else 400)
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+@app.route('/api/impact/composition', methods=['GET'])
+@login_required
+def get_environmental_composition_impact():
+    """Get waste composition environmental impact."""
+    try:
+        days = int(request.args.get('days', 30))
+        if days < 1 or days > 180:
+            return jsonify({'success': False, 'message': 'days must be between 1 and 180'}), 400
+
+        result = EnvironmentalImpactService().get_waste_composition_impact(days)
+        return jsonify(result), (200 if result.get('success') else 400)
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+@app.route('/api/impact/trends', methods=['GET'])
+@login_required
+def get_environmental_trends():
+    """Get sustainability improvement trends."""
+    try:
+        days = int(request.args.get('days', 30))
+        if days < 1 or days > 180:
+            return jsonify({'success': False, 'message': 'days must be between 1 and 180'}), 400
+
+        result = EnvironmentalImpactService().get_sustainability_trends(days)
+        return jsonify(result), (200 if result.get('success') else 400)
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+@app.route('/api/impact/recommendations', methods=['GET'])
+@login_required
+def get_environmental_recommendations():
+    """Get sustainability improvement recommendations."""
+    try:
+        days = int(request.args.get('days', 30))
+        if days < 1 or days > 180:
+            return jsonify({'success': False, 'message': 'days must be between 1 and 180'}), 400
+
+        result = EnvironmentalImpactService().get_sustainability_recommendations(days)
         return jsonify(result), (200 if result.get('success') else 400)
     except Exception as e:
         return jsonify({'success': False, 'error': str(e)}), 500
