@@ -467,6 +467,34 @@
         </div>
     </div>
 
+    <!-- Citizen Feedback Analytics Section -->
+    <div class="row g-3 mb-4">
+        <div class="col-12">
+            <div class="card border-info">
+                <div class="card-header bg-info text-white d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0"><i class="bi bi-chat-dots"></i> Citizen Feedback & Engagement</h5>
+                    <div>
+                        <button class="btn btn-sm btn-light me-2" onclick="viewFeedbackOverview()">
+                            <i class="bi bi-graph-up"></i> Overview
+                        </button>
+                        <button class="btn btn-sm btn-light me-2" onclick="viewComplaintsAnalysis()">
+                            <i class="bi bi-exclamation-triangle"></i> Complaints
+                        </button>
+                        <button class="btn btn-sm btn-light me-2" onclick="viewSatisfactionTrends()">
+                            <i class="bi bi-smile"></i> Satisfaction
+                        </button>
+                        <button class="btn btn-sm btn-light" onclick="viewTopicsAnalysis()">
+                            <i class="bi bi-tag"></i> Topics
+                        </button>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <p class="text-muted"><i class="bi bi-info-circle"></i> Monitor citizen engagement, feedback sentiment, complaint resolution, and identify service improvement opportunities.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- Predictive Analytics Section -->
     <div class="row g-3 mb-4">
         <div class="col-12">
@@ -2506,6 +2534,161 @@ function viewFleetHealth() {
         },
         error: function() {
             alert('Failed to fetch fleet health.');
+        }
+    });
+}
+
+// Citizen Feedback Analytics Functions
+
+function viewFeedbackOverview() {
+    $.ajax({
+        url: '/api/feedback/overview',
+        type: 'GET',
+        data: { days: 30 },
+        success: function(response) {
+            if (response.success) {
+                const data = response;
+                let html = `
+                    <div class="table-responsive">
+                        <table class="table table-striped">
+                            <tbody>
+                                <tr>
+                                    <td><strong>Total Feedback Received:</strong></td>
+                                    <td>${data.total_feedback_received}</td>
+                                </tr>
+                                <tr>
+                                    <td><strong>Positive (≥4 stars):</strong></td>
+                                    <td><span class="badge bg-success">${data.positive_feedback}</span> (${data.positive_percent}%)</td>
+                                </tr>
+                                <tr>
+                                    <td><strong>Neutral (3 stars):</strong></td>
+                                    <td><span class="badge bg-warning">${data.neutral_feedback}</span></td>
+                                </tr>
+                                <tr>
+                                    <td><strong>Negative (<3 stars):</strong></td>
+                                    <td><span class="badge bg-danger">${data.negative_feedback}</span></td>
+                                </tr>
+                                <tr>
+                                    <td><strong>Average Rating:</strong></td>
+                                    <td>${data.avg_rating}/5 ⭐</td>
+                                </tr>
+                                <tr>
+                                    <td><strong>Sentiment Score:</strong></td>
+                                    <td><strong>${data.sentiment_score}/100</strong> - ${data.sentiment_status}</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                `;
+                $('#modalBody').html(html);
+                $('#detailsModal').modal('show');
+                $('#modalTitle').html('<i class="bi bi-graph-up"></i> Feedback Overview');
+            } else {
+                alert('Failed to fetch feedback overview: ' + response.error);
+            }
+        },
+        error: function() {
+            alert('Failed to fetch feedback overview.');
+        }
+    });
+}
+
+function viewComplaintsAnalysis() {
+    $.ajax({
+        url: '/api/feedback/complaints',
+        type: 'GET',
+        data: { days: 30 },
+        success: function(response) {
+            if (response.success) {
+                const complaints = response.complaints_by_category || [];
+                let html = '<div class="table-responsive"><table class="table table-striped table-sm"><thead><tr><th>Category</th><th>Total</th><th>Resolved</th><th>Resolution Rate</th><th>Avg Days</th></tr></thead><tbody>';
+                
+                complaints.forEach(c => {
+                    html += `<tr>
+                        <td>${c.category}</td>
+                        <td>${c.total_complaints}</td>
+                        <td><span class="badge bg-success">${c.resolved}</span></td>
+                        <td><span class="badge ${c.resolution_rate_percent >= 70 ? 'bg-success' : 'bg-warning'}">${c.resolution_rate_percent}%</span></td>
+                        <td>${c.avg_resolution_days} days</td>
+                    </tr>`;
+                });
+                
+                html += '</tbody></table></div>';
+                $('#modalBody').html(html);
+                $('#detailsModal').modal('show');
+                $('#modalTitle').html('<i class="bi bi-exclamation-triangle"></i> Complaint Analysis');
+            } else {
+                alert('Failed to fetch complaint data: ' + response.error);
+            }
+        },
+        error: function() {
+            alert('Failed to fetch complaint analysis.');
+        }
+    });
+}
+
+function viewSatisfactionTrends() {
+    $.ajax({
+        url: '/api/feedback/satisfaction-trends',
+        type: 'GET',
+        data: { days: 30 },
+        success: function(response) {
+            if (response.success) {
+                const trends = response.trends || [];
+                let html = '<div class="table-responsive"><table class="table table-striped table-sm"><thead><tr><th>Date</th><th>Feedback Count</th><th>Avg Rating</th><th>Positive %</th></tr></thead><tbody>';
+                
+                trends.forEach(t => {
+                    html += `<tr>
+                        <td>${t.date}</td>
+                        <td>${t.feedback_count}</td>
+                        <td>${t.avg_rating}⭐</td>
+                        <td><span class="badge bg-${t.positive_percent >= 70 ? 'success' : t.positive_percent >= 50 ? 'warning' : 'danger'}">${t.positive_percent}%</span></td>
+                    </tr>`;
+                });
+                
+                html += '</tbody></table></div>';
+                $('#modalBody').html(html);
+                $('#detailsModal').modal('show');
+                $('#modalTitle').html('<i class="bi bi-smile"></i> Satisfaction Trends');
+            } else {
+                alert('Failed to fetch satisfaction trends: ' + response.error);
+            }
+        },
+        error: function() {
+            alert('Failed to fetch satisfaction trends.');
+        }
+    });
+}
+
+function viewTopicsAnalysis() {
+    $.ajax({
+        url: '/api/feedback/topics',
+        type: 'GET',
+        data: { days: 30, limit: 10 },
+        success: function(response) {
+            if (response.success) {
+                const topics = response.topics || [];
+                let html = '<div class="table-responsive"><table class="table table-striped table-sm"><thead><tr><th>Topic</th><th>Mentions</th><th>Avg Rating</th><th>Positive Sentiment</th></tr></thead><tbody>';
+                
+                topics.forEach(t => {
+                    html += `<tr>
+                        <td><span class="badge bg-secondary">${t.topic}</span></td>
+                        <td>${t.mention_count}</td>
+                        <td>${t.avg_rating}⭐</td>
+                        <td><span class="badge bg-${t.positive_sentiment_percent >= 70 ? 'success' : 'warning'}">${t.positive_sentiment_percent}%</span></td>
+                    </tr>`;
+                });
+                
+                html += '</tbody></table></div>';
+                $('#modalBody').html(html);
+                $('#detailsModal').modal('show');
+                $('#modalTitle').html('<i class="bi bi-tag"></i> Feedback Topics');
+            } else {
+                alert('Failed to fetch topics: ' + response.error);
+            }
+        },
+        error: function() {
+            alert('Failed to fetch topic analysis.');
         }
     });
 }

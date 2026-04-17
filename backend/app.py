@@ -48,6 +48,7 @@ from service_availability import ServiceAvailabilityService
 from waste_audit_insights import WasteAuditInsightsService
 from environmental_impact_insights import EnvironmentalImpactService
 from vehicle_maintenance_insights import VehicleMaintenanceService
+from citizen_feedback_analytics import CitizenFeedbackService
 
 # Load environment variables
 load_dotenv()
@@ -2684,6 +2685,103 @@ def get_maintenance_recommendations():
     """Get vehicle maintenance recommendations."""
     try:
         result = VehicleMaintenanceService().get_maintenance_recommendations()
+        return jsonify(result), (200 if result.get('success') else 400)
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+# =============================================
+# CITIZEN FEEDBACK ANALYTICS
+# =============================================
+
+@app.route('/api/feedback/overview', methods=['GET'])
+@login_required
+def get_feedback_overview():
+    """Get citizen feedback overview."""
+    try:
+        days = int(request.args.get('days', 30))
+        if days < 1 or days > 180:
+            return jsonify({'success': False, 'message': 'days must be between 1 and 180'}), 400
+
+        result = CitizenFeedbackService().get_feedback_overview(days)
+        return jsonify(result), (200 if result.get('success') else 400)
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+@app.route('/api/feedback/complaints', methods=['GET'])
+@login_required
+def get_complaint_summary():
+    """Get complaint summary by category."""
+    try:
+        days = int(request.args.get('days', 30))
+        if days < 1 or days > 180:
+            return jsonify({'success': False, 'message': 'days must be between 1 and 180'}), 400
+
+        result = CitizenFeedbackService().get_complaint_summary(days)
+        return jsonify(result), (200 if result.get('success') else 400)
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+@app.route('/api/feedback/satisfaction-trends', methods=['GET'])
+@login_required
+def get_satisfaction_trends():
+    """Get satisfaction rating trends."""
+    try:
+        days = int(request.args.get('days', 30))
+        if days < 1 or days > 180:
+            return jsonify({'success': False, 'message': 'days must be between 1 and 180'}), 400
+
+        result = CitizenFeedbackService().get_satisfaction_trends(days)
+        return jsonify(result), (200 if result.get('success') else 400)
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+@app.route('/api/feedback/topics', methods=['GET'])
+@login_required
+def get_feedback_topics():
+    """Get most mentioned feedback topics."""
+    try:
+        days = int(request.args.get('days', 30))
+        limit = int(request.args.get('limit', 10))
+        if days < 1 or days > 180:
+            return jsonify({'success': False, 'message': 'days must be between 1 and 180'}), 400
+        if limit < 1 or limit > 20:
+            return jsonify({'success': False, 'message': 'limit must be between 1 and 20'}), 400
+
+        result = CitizenFeedbackService().get_feedback_topics(days, limit)
+        return jsonify(result), (200 if result.get('success') else 400)
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+@app.route('/api/feedback/engagement', methods=['GET'])
+@login_required
+def get_citizen_engagement():
+    """Get citizen engagement metrics."""
+    try:
+        days = int(request.args.get('days', 30))
+        if days < 1 or days > 180:
+            return jsonify({'success': False, 'message': 'days must be between 1 and 180'}), 400
+
+        result = CitizenFeedbackService().get_citizen_engagement(days)
+        return jsonify(result), (200 if result.get('success') else 400)
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+@app.route('/api/feedback/recommendations', methods=['GET'])
+@login_required
+def get_feedback_recommendations():
+    """Get citizen feedback recommendations."""
+    try:
+        days = int(request.args.get('days', 30))
+        if days < 1 or days > 180:
+            return jsonify({'success': False, 'message': 'days must be between 1 and 180'}), 400
+
+        result = CitizenFeedbackService().get_feedback_recommendations(days)
         return jsonify(result), (200 if result.get('success') else 400)
     except Exception as e:
         return jsonify({'success': False, 'error': str(e)}), 500
