@@ -49,6 +49,7 @@ from waste_audit_insights import WasteAuditInsightsService
 from environmental_impact_insights import EnvironmentalImpactService
 from vehicle_maintenance_insights import VehicleMaintenanceService
 from citizen_feedback_analytics import CitizenFeedbackService
+from waste_classification_insights import WasteClassificationService
 
 # Load environment variables
 load_dotenv()
@@ -2782,6 +2783,81 @@ def get_feedback_recommendations():
             return jsonify({'success': False, 'message': 'days must be between 1 and 180'}), 400
 
         result = CitizenFeedbackService().get_feedback_recommendations(days)
+        return jsonify(result), (200 if result.get('success') else 400)
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+# =============================================
+# WASTE CLASSIFICATION INSIGHTS
+# =============================================
+
+@app.route('/api/classification/summary', methods=['GET'])
+@login_required
+def get_classification_summary():
+    """Get waste classification summary."""
+    try:
+        days = int(request.args.get('days', 30))
+        if days < 1 or days > 180:
+            return jsonify({'success': False, 'message': 'days must be between 1 and 180'}), 400
+
+        result = WasteClassificationService().get_classification_summary(days)
+        return jsonify(result), (200 if result.get('success') else 400)
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+@app.route('/api/classification/distribution', methods=['GET'])
+@login_required
+def get_type_distribution():
+    """Get bin type distribution."""
+    try:
+        result = WasteClassificationService().get_type_distribution()
+        return jsonify(result), (200 if result.get('success') else 400)
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+@app.route('/api/classification/zones', methods=['GET'])
+@login_required
+def get_zone_classification():
+    """Get waste classification by zone."""
+    try:
+        days = int(request.args.get('days', 30))
+        if days < 1 or days > 180:
+            return jsonify({'success': False, 'message': 'days must be between 1 and 180'}), 400
+
+        result = WasteClassificationService().get_zone_classification(days)
+        return jsonify(result), (200 if result.get('success') else 400)
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+@app.route('/api/classification/reports', methods=['GET'])
+@login_required
+def get_report_profile():
+    """Get waste report classification profile."""
+    try:
+        days = int(request.args.get('days', 30))
+        if days < 1 or days > 180:
+            return jsonify({'success': False, 'message': 'days must be between 1 and 180'}), 400
+
+        result = WasteClassificationService().get_report_profile(days)
+        return jsonify(result), (200 if result.get('success') else 400)
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+@app.route('/api/classification/recommendations', methods=['GET'])
+@login_required
+def get_classification_recommendations():
+    """Get waste classification recommendations."""
+    try:
+        days = int(request.args.get('days', 30))
+        if days < 1 or days > 180:
+            return jsonify({'success': False, 'message': 'days must be between 1 and 180'}), 400
+
+        result = WasteClassificationService().get_classification_recommendations(days)
         return jsonify(result), (200 if result.get('success') else 400)
     except Exception as e:
         return jsonify({'success': False, 'error': str(e)}), 500

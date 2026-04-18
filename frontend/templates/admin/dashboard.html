@@ -417,6 +417,31 @@
         </div>
     </div>
 
+    <!-- Waste Classification Insights Section -->
+    <div class="row g-3 mb-4">
+        <div class="col-12">
+            <div class="card border-warning">
+                <div class="card-header bg-warning text-dark d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0"><i class="bi bi-diagram-3"></i> Waste Classification Insights</h5>
+                    <div>
+                        <button class="btn btn-sm btn-light me-2" onclick="viewClassificationSummary()">
+                            <i class="bi bi-pie-chart"></i> Summary
+                        </button>
+                        <button class="btn btn-sm btn-light me-2" onclick="viewClassificationZones()">
+                            <i class="bi bi-geo-alt"></i> Zones
+                        </button>
+                        <button class="btn btn-sm btn-light" onclick="viewClassificationRecommendations()">
+                            <i class="bi bi-lightbulb"></i> Recommendations
+                        </button>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <p class="text-muted"><i class="bi bi-info-circle"></i> Track bin type distribution, zone-level waste classification, report patterns, and source-separation opportunities.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- Environmental Impact Insights Section -->
     <div class="row g-3 mb-4">
         <div class="col-12">
@@ -2689,6 +2714,132 @@ function viewTopicsAnalysis() {
         },
         error: function() {
             alert('Failed to fetch topic analysis.');
+        }
+    });
+}
+
+// Waste Classification Insights Functions
+
+function viewClassificationSummary() {
+    $.ajax({
+        url: '/api/classification/summary',
+        type: 'GET',
+        data: { days: 30 },
+        success: function(response) {
+            if (response.success) {
+                const distribution = response.bin_type_distribution || {};
+                const collections = response.collection_breakdown || [];
+                let html = `
+                    <div class="table-responsive mb-3">
+                        <table class="table table-striped">
+                            <tbody>
+                                <tr><td><strong>Total Bins:</strong></td><td>${response.total_bins}</td></tr>
+                                <tr><td><strong>Active Bins:</strong></td><td>${response.active_bins}</td></tr>
+                                <tr><td><strong>Dominant Bin Type:</strong></td><td><span class="badge bg-primary">${response.dominant_bin_type}</span></td></tr>
+                                <tr><td><strong>Waste Reports (30 days):</strong></td><td>${response.waste_reports_last_period}</td></tr>
+                                <tr><td><strong>High Priority Reports:</strong></td><td><span class="badge bg-danger">${response.high_priority_reports}</span></td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                    <h6>Bin Type Distribution</h6>
+                    <ul class="list-group mb-3">
+                        <li class="list-group-item d-flex justify-content-between"><span>General</span><strong>${distribution.general || 0}</strong></li>
+                        <li class="list-group-item d-flex justify-content-between"><span>Recyclable</span><strong>${distribution.recyclable || 0}</strong></li>
+                        <li class="list-group-item d-flex justify-content-between"><span>Organic</span><strong>${distribution.organic || 0}</strong></li>
+                        <li class="list-group-item d-flex justify-content-between"><span>Hazardous</span><strong>${distribution.hazardous || 0}</strong></li>
+                    </ul>
+                `;
+
+                if (collections.length) {
+                    html += '<h6>Collection Breakdown</h6><div class="table-responsive"><table class="table table-sm table-striped"><thead><tr><th>Type</th><th>Collections</th><th>Avg Waste Amount</th></tr></thead><tbody>';
+                    collections.forEach(item => {
+                        html += `<tr><td>${item.bin_type}</td><td>${item.collection_count}</td><td>${item.avg_waste_amount}</td></tr>`;
+                    });
+                    html += '</tbody></table></div>';
+                }
+
+                $('#modalTitle').html('<i class="bi bi-pie-chart"></i> Waste Classification Summary');
+                $('#modalBody').html(html);
+                $('#detailsModal').modal('show');
+            } else {
+                alert('Failed to fetch classification summary: ' + response.error);
+            }
+        },
+        error: function() {
+            alert('Failed to fetch classification summary.');
+        }
+    });
+}
+
+function viewClassificationZones() {
+    $.ajax({
+        url: '/api/classification/zones',
+        type: 'GET',
+        data: { days: 30 },
+        success: function(response) {
+            if (response.success) {
+                const zones = response.zones || [];
+                let html = '<div class="table-responsive"><table class="table table-striped table-sm"><thead><tr><th>Zone</th><th>Total Bins</th><th>Dominant Type</th><th>Avg Fill</th><th>Collections</th></tr></thead><tbody>';
+
+                zones.forEach(zone => {
+                    html += `<tr>
+                        <td>${zone.zone}</td>
+                        <td>${zone.total_bins}</td>
+                        <td><span class="badge bg-secondary">${zone.dominant_bin_type}</span></td>
+                        <td>${zone.avg_fill_level}%</td>
+                        <td>${zone.collections_last_period}</td>
+                    </tr>`;
+                });
+
+                html += '</tbody></table></div>';
+                $('#modalTitle').html('<i class="bi bi-geo-alt"></i> Zone Classification');
+                $('#modalBody').html(html);
+                $('#detailsModal').modal('show');
+            } else {
+                alert('Failed to fetch zone classification: ' + response.error);
+            }
+        },
+        error: function() {
+            alert('Failed to fetch zone classification.');
+        }
+    });
+}
+
+function viewClassificationRecommendations() {
+    $.ajax({
+        url: '/api/classification/recommendations',
+        type: 'GET',
+        data: { days: 30 },
+        success: function(response) {
+            if (response.success) {
+                const recommendations = response.recommendations || [];
+                let html = '<div class="list-group">';
+
+                if (!recommendations.length) {
+                    html += '<div class="list-group-item">No immediate recommendations. Classification patterns look balanced.</div>';
+                } else {
+                    recommendations.forEach(item => {
+                        html += `<div class="list-group-item">
+                            <div class="d-flex justify-content-between align-items-start mb-2">
+                                <strong>${item.category}</strong>
+                                <span class="badge bg-${item.priority === 'HIGH' ? 'danger' : 'warning'}">${item.priority}</span>
+                            </div>
+                            <p class="mb-1">${item.recommendation}</p>
+                            <small class="text-muted"><strong>Action:</strong> ${item.action}</small>
+                        </div>`;
+                    });
+                }
+
+                html += '</div>';
+                $('#modalTitle').html('<i class="bi bi-lightbulb"></i> Classification Recommendations');
+                $('#modalBody').html(html);
+                $('#detailsModal').modal('show');
+            } else {
+                alert('Failed to fetch recommendations: ' + response.error);
+            }
+        },
+        error: function() {
+            alert('Failed to fetch classification recommendations.');
         }
     });
 }
