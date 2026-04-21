@@ -342,6 +342,31 @@
         </div>
     </div>
 
+    <!-- Route Risk Insights Section -->
+    <div class="row g-3 mb-4">
+        <div class="col-12">
+            <div class="card border-danger">
+                <div class="card-header bg-danger text-white d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0"><i class="bi bi-sign-turn-slight-right"></i> Route Risk Insights</h5>
+                    <div>
+                        <button class="btn btn-sm btn-light me-2" onclick="viewRouteRiskOverview()">
+                            <i class="bi bi-speedometer2"></i> Overview
+                        </button>
+                        <button class="btn btn-sm btn-light me-2" onclick="viewHighRiskRoutes()">
+                            <i class="bi bi-exclamation-triangle"></i> High-Risk Routes
+                        </button>
+                        <button class="btn btn-sm btn-light" onclick="viewRouteRiskRecommendations()">
+                            <i class="bi bi-lightbulb"></i> Recommendations
+                        </button>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <p class="text-muted"><i class="bi bi-info-circle"></i> Monitor route-level operational risk from open incidents, alert severity, and zone pressure before service quality degrades.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- Service Availability Insights Section -->
     <div class="row g-3 mb-4">
         <div class="col-12">
@@ -2840,6 +2865,109 @@ function viewClassificationRecommendations() {
         },
         error: function() {
             alert('Failed to fetch classification recommendations.');
+        }
+    });
+}
+
+// Route Risk Insights Functions
+
+function viewRouteRiskOverview() {
+    $.ajax({
+        url: '/api/route-risk/overview',
+        type: 'GET',
+        data: { days: 30 },
+        success: function(response) {
+            if (response.success) {
+                const badge = response.risk_status === 'High' ? 'danger' : response.risk_status === 'Medium' ? 'warning' : 'success';
+                const html = `
+                    <div class="table-responsive">
+                        <table class="table table-striped">
+                            <tbody>
+                                <tr><td><strong>Risk Score</strong></td><td><span class="badge bg-${badge}">${response.risk_score}</span></td></tr>
+                                <tr><td><strong>Risk Status</strong></td><td>${response.risk_status}</td></tr>
+                                <tr><td><strong>Total Routes</strong></td><td>${response.total_routes}</td></tr>
+                                <tr><td><strong>Completed Routes</strong></td><td>${response.completed_routes}</td></tr>
+                                <tr><td><strong>Unresolved Reports</strong></td><td>${response.unresolved_reports}</td></tr>
+                                <tr><td><strong>Critical Alerts</strong></td><td>${response.critical_alerts}</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                `;
+                $('#modalTitle').html('<i class="bi bi-speedometer2"></i> Route Risk Overview');
+                $('#modalBody').html(html);
+                $('#detailsModal').modal('show');
+            } else {
+                alert('Failed to fetch route risk overview: ' + response.error);
+            }
+        },
+        error: function() {
+            alert('Failed to fetch route risk overview.');
+        }
+    });
+}
+
+function viewHighRiskRoutes() {
+    $.ajax({
+        url: '/api/route-risk/routes',
+        type: 'GET',
+        data: { days: 30 },
+        success: function(response) {
+            if (response.success) {
+                const routes = response.routes || [];
+                let html = '<div class="table-responsive"><table class="table table-striped table-sm"><thead><tr><th>Route</th><th>Status</th><th>Urgent Issues</th><th>Risk</th></tr></thead><tbody>';
+                routes.forEach(route => {
+                    const riskBadge = route.risk_level === 'High' ? 'danger' : route.risk_level === 'Medium' ? 'warning' : 'success';
+                    html += `<tr>
+                        <td>${route.route_id} - ${route.route_name}</td>
+                        <td>${route.status}</td>
+                        <td>${route.urgent_open_reports}</td>
+                        <td><span class="badge bg-${riskBadge}">${route.risk_level} (${route.risk_points})</span></td>
+                    </tr>`;
+                });
+                html += '</tbody></table></div>';
+                $('#modalTitle').html('<i class="bi bi-exclamation-triangle"></i> High-Risk Routes');
+                $('#modalBody').html(html);
+                $('#detailsModal').modal('show');
+            } else {
+                alert('Failed to fetch high-risk routes: ' + response.error);
+            }
+        },
+        error: function() {
+            alert('Failed to fetch high-risk routes.');
+        }
+    });
+}
+
+function viewRouteRiskRecommendations() {
+    $.ajax({
+        url: '/api/route-risk/recommendations',
+        type: 'GET',
+        data: { days: 30 },
+        success: function(response) {
+            if (response.success) {
+                const recommendations = response.recommendations || [];
+                let html = '<div class="list-group">';
+                recommendations.forEach(item => {
+                    const badge = item.priority === 'HIGH' ? 'danger' : item.priority === 'MEDIUM' ? 'warning' : 'secondary';
+                    html += `<div class="list-group-item">
+                        <div class="d-flex justify-content-between align-items-center mb-2">
+                            <strong>${item.category}</strong>
+                            <span class="badge bg-${badge}">${item.priority}</span>
+                        </div>
+                        <p class="mb-1">${item.recommendation}</p>
+                        <small class="text-muted"><strong>Action:</strong> ${item.action}</small>
+                    </div>`;
+                });
+                html += '</div>';
+                $('#modalTitle').html('<i class="bi bi-lightbulb"></i> Route Risk Recommendations');
+                $('#modalBody').html(html);
+                $('#detailsModal').modal('show');
+            } else {
+                alert('Failed to fetch recommendations: ' + response.error);
+            }
+        },
+        error: function() {
+            alert('Failed to fetch route risk recommendations.');
         }
     });
 }

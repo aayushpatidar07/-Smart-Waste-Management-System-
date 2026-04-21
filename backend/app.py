@@ -50,6 +50,7 @@ from environmental_impact_insights import EnvironmentalImpactService
 from vehicle_maintenance_insights import VehicleMaintenanceService
 from citizen_feedback_analytics import CitizenFeedbackService
 from waste_classification_insights import WasteClassificationService
+from route_risk_insights import RouteRiskInsightsService
 
 # Load environment variables
 load_dotenv()
@@ -2858,6 +2859,70 @@ def get_classification_recommendations():
             return jsonify({'success': False, 'message': 'days must be between 1 and 180'}), 400
 
         result = WasteClassificationService().get_classification_recommendations(days)
+        return jsonify(result), (200 if result.get('success') else 400)
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+# =============================================
+# ROUTE RISK INSIGHTS
+# =============================================
+
+@app.route('/api/route-risk/overview', methods=['GET'])
+@login_required
+def get_route_risk_overview():
+    """Get route risk overview metrics."""
+    try:
+        days = int(request.args.get('days', 30))
+        if days < 1 or days > 180:
+            return jsonify({'success': False, 'message': 'days must be between 1 and 180'}), 400
+
+        result = RouteRiskInsightsService().get_risk_overview(days)
+        return jsonify(result), (200 if result.get('success') else 400)
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+@app.route('/api/route-risk/routes', methods=['GET'])
+@login_required
+def get_high_risk_routes():
+    """Get high risk routes list."""
+    try:
+        days = int(request.args.get('days', 30))
+        if days < 1 or days > 180:
+            return jsonify({'success': False, 'message': 'days must be between 1 and 180'}), 400
+
+        result = RouteRiskInsightsService().get_high_risk_routes(days)
+        return jsonify(result), (200 if result.get('success') else 400)
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+@app.route('/api/route-risk/zones', methods=['GET'])
+@login_required
+def get_route_risk_zones():
+    """Get route risk by zone."""
+    try:
+        days = int(request.args.get('days', 30))
+        if days < 1 or days > 180:
+            return jsonify({'success': False, 'message': 'days must be between 1 and 180'}), 400
+
+        result = RouteRiskInsightsService().get_zone_risk_profile(days)
+        return jsonify(result), (200 if result.get('success') else 400)
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+@app.route('/api/route-risk/recommendations', methods=['GET'])
+@login_required
+def get_route_risk_recommendations():
+    """Get route risk recommendations."""
+    try:
+        days = int(request.args.get('days', 30))
+        if days < 1 or days > 180:
+            return jsonify({'success': False, 'message': 'days must be between 1 and 180'}), 400
+
+        result = RouteRiskInsightsService().get_risk_recommendations(days)
         return jsonify(result), (200 if result.get('success') else 400)
     except Exception as e:
         return jsonify({'success': False, 'error': str(e)}), 500
