@@ -50,6 +50,7 @@ from environmental_impact_insights import EnvironmentalImpactService
 from vehicle_maintenance_insights import VehicleMaintenanceService
 from citizen_feedback_analytics import CitizenFeedbackService
 from waste_classification_insights import WasteClassificationService
+from bin_health_insights import BinHealthInsightsService
 
 # Load environment variables
 load_dotenv()
@@ -2858,6 +2859,70 @@ def get_classification_recommendations():
             return jsonify({'success': False, 'message': 'days must be between 1 and 180'}), 400
 
         result = WasteClassificationService().get_classification_recommendations(days)
+        return jsonify(result), (200 if result.get('success') else 400)
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+# =============================================
+# BIN HEALTH INSIGHTS
+# =============================================
+
+@app.route('/api/bin-health/overview', methods=['GET'])
+@login_required
+def get_bin_health_overview():
+    """Get bin health overview."""
+    try:
+        days = int(request.args.get('days', 14))
+        if days < 1 or days > 90:
+            return jsonify({'success': False, 'message': 'days must be between 1 and 90'}), 400
+
+        result = BinHealthInsightsService().get_health_overview(days)
+        return jsonify(result), (200 if result.get('success') else 400)
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+@app.route('/api/bin-health/ranking', methods=['GET'])
+@login_required
+def get_bin_health_ranking():
+    """Get bin health risk ranking."""
+    try:
+        days = int(request.args.get('days', 14))
+        if days < 1 or days > 90:
+            return jsonify({'success': False, 'message': 'days must be between 1 and 90'}), 400
+
+        result = BinHealthInsightsService().get_bin_health_ranking(days)
+        return jsonify(result), (200 if result.get('success') else 400)
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+@app.route('/api/bin-health/anomalies', methods=['GET'])
+@login_required
+def get_bin_sensor_anomalies():
+    """Get zone-level sensor anomaly summary."""
+    try:
+        days = int(request.args.get('days', 14))
+        if days < 1 or days > 90:
+            return jsonify({'success': False, 'message': 'days must be between 1 and 90'}), 400
+
+        result = BinHealthInsightsService().get_sensor_anomaly_summary(days)
+        return jsonify(result), (200 if result.get('success') else 400)
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+@app.route('/api/bin-health/recommendations', methods=['GET'])
+@login_required
+def get_bin_health_recommendations():
+    """Get bin health recommendations."""
+    try:
+        days = int(request.args.get('days', 14))
+        if days < 1 or days > 90:
+            return jsonify({'success': False, 'message': 'days must be between 1 and 90'}), 400
+
+        result = BinHealthInsightsService().get_health_recommendations(days)
         return jsonify(result), (200 if result.get('success') else 400)
     except Exception as e:
         return jsonify({'success': False, 'error': str(e)}), 500
