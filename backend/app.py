@@ -50,6 +50,7 @@ from environmental_impact_insights import EnvironmentalImpactService
 from vehicle_maintenance_insights import VehicleMaintenanceService
 from citizen_feedback_analytics import CitizenFeedbackService
 from waste_classification_insights import WasteClassificationService
+from alert_response_insights import AlertResponseInsightsService
 
 # Load environment variables
 load_dotenv()
@@ -2858,6 +2859,70 @@ def get_classification_recommendations():
             return jsonify({'success': False, 'message': 'days must be between 1 and 180'}), 400
 
         result = WasteClassificationService().get_classification_recommendations(days)
+        return jsonify(result), (200 if result.get('success') else 400)
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+# =============================================
+# ALERT RESPONSE INSIGHTS
+# =============================================
+
+@app.route('/api/alert-response/overview', methods=['GET'])
+@login_required
+def get_alert_response_overview():
+    """Get alert response overview."""
+    try:
+        days = int(request.args.get('days', 30))
+        if days < 1 or days > 180:
+            return jsonify({'success': False, 'message': 'days must be between 1 and 180'}), 400
+
+        result = AlertResponseInsightsService().get_response_overview(days)
+        return jsonify(result), (200 if result.get('success') else 400)
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+@app.route('/api/alert-response/severity', methods=['GET'])
+@login_required
+def get_alert_response_by_severity():
+    """Get alert response metrics by severity."""
+    try:
+        days = int(request.args.get('days', 30))
+        if days < 1 or days > 180:
+            return jsonify({'success': False, 'message': 'days must be between 1 and 180'}), 400
+
+        result = AlertResponseInsightsService().get_severity_response(days)
+        return jsonify(result), (200 if result.get('success') else 400)
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+@app.route('/api/alert-response/hotspots', methods=['GET'])
+@login_required
+def get_alert_hotspots():
+    """Get alert hotspot bins."""
+    try:
+        days = int(request.args.get('days', 30))
+        if days < 1 or days > 180:
+            return jsonify({'success': False, 'message': 'days must be between 1 and 180'}), 400
+
+        result = AlertResponseInsightsService().get_alert_hotspots(days)
+        return jsonify(result), (200 if result.get('success') else 400)
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+@app.route('/api/alert-response/recommendations', methods=['GET'])
+@login_required
+def get_alert_response_recommendations():
+    """Get alert response recommendations."""
+    try:
+        days = int(request.args.get('days', 30))
+        if days < 1 or days > 180:
+            return jsonify({'success': False, 'message': 'days must be between 1 and 180'}), 400
+
+        result = AlertResponseInsightsService().get_response_recommendations(days)
         return jsonify(result), (200 if result.get('success') else 400)
     except Exception as e:
         return jsonify({'success': False, 'error': str(e)}), 500
