@@ -52,6 +52,7 @@ from citizen_feedback_analytics import CitizenFeedbackService
 from waste_classification_insights import WasteClassificationService
 from bin_health_insights import BinHealthInsightsService
 from route_risk_insights import RouteRiskInsightsService
+from fleet_utilization_insights import FleetUtilizationInsightsService
 
 # Load environment variables
 load_dotenv()
@@ -2988,6 +2989,70 @@ def get_bin_health_recommendations():
             return jsonify({'success': False, 'message': 'days must be between 1 and 90'}), 400
 
         result = BinHealthInsightsService().get_health_recommendations(days)
+        return jsonify(result), (200 if result.get('success') else 400)
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+# =============================================
+# FLEET UTILIZATION INSIGHTS
+# =============================================
+
+@app.route('/api/fleet-utilization/overview', methods=['GET'])
+@login_required
+def get_fleet_utilization_overview():
+    """Get fleet utilization overview."""
+    try:
+        days = int(request.args.get('days', 30))
+        if days < 1 or days > 180:
+            return jsonify({'success': False, 'message': 'days must be between 1 and 180'}), 400
+
+        result = FleetUtilizationInsightsService().get_utilization_overview(days)
+        return jsonify(result), (200 if result.get('success') else 400)
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+@app.route('/api/fleet-utilization/ranking', methods=['GET'])
+@login_required
+def get_fleet_utilization_ranking():
+    """Get vehicle utilization ranking."""
+    try:
+        days = int(request.args.get('days', 30))
+        if days < 1 or days > 180:
+            return jsonify({'success': False, 'message': 'days must be between 1 and 180'}), 400
+
+        result = FleetUtilizationInsightsService().get_vehicle_utilization_ranking(days)
+        return jsonify(result), (200 if result.get('success') else 400)
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+@app.route('/api/fleet-utilization/idle-alerts', methods=['GET'])
+@login_required
+def get_fleet_idle_alerts():
+    """Get idle fleet alerts."""
+    try:
+        days = int(request.args.get('days', 30))
+        if days < 1 or days > 180:
+            return jsonify({'success': False, 'message': 'days must be between 1 and 180'}), 400
+
+        result = FleetUtilizationInsightsService().get_idle_fleet_alerts(days)
+        return jsonify(result), (200 if result.get('success') else 400)
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+@app.route('/api/fleet-utilization/recommendations', methods=['GET'])
+@login_required
+def get_fleet_utilization_recommendations():
+    """Get fleet utilization recommendations."""
+    try:
+        days = int(request.args.get('days', 30))
+        if days < 1 or days > 180:
+            return jsonify({'success': False, 'message': 'days must be between 1 and 180'}), 400
+
+        result = FleetUtilizationInsightsService().get_utilization_recommendations(days)
         return jsonify(result), (200 if result.get('success') else 400)
     except Exception as e:
         return jsonify({'success': False, 'error': str(e)}), 500
