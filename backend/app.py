@@ -52,6 +52,7 @@ from citizen_feedback_analytics import CitizenFeedbackService
 from waste_classification_insights import WasteClassificationService
 from bin_health_insights import BinHealthInsightsService
 from route_risk_insights import RouteRiskInsightsService
+from schedule_adherence_insights import ScheduleAdherenceInsightsService
 
 # Load environment variables
 load_dotenv()
@@ -2988,6 +2989,70 @@ def get_bin_health_recommendations():
             return jsonify({'success': False, 'message': 'days must be between 1 and 90'}), 400
 
         result = BinHealthInsightsService().get_health_recommendations(days)
+        return jsonify(result), (200 if result.get('success') else 400)
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+# =============================================
+# SCHEDULE ADHERENCE INSIGHTS
+# =============================================
+
+@app.route('/api/schedule-adherence/overview', methods=['GET'])
+@login_required
+def get_schedule_adherence_overview():
+    """Get schedule adherence overview."""
+    try:
+        days = int(request.args.get('days', 30))
+        if days < 1 or days > 180:
+            return jsonify({'success': False, 'message': 'days must be between 1 and 180'}), 400
+
+        result = ScheduleAdherenceInsightsService().get_adherence_overview(days)
+        return jsonify(result), (200 if result.get('success') else 400)
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+@app.route('/api/schedule-adherence/zones', methods=['GET'])
+@login_required
+def get_schedule_adherence_zones():
+    """Get schedule adherence by zone."""
+    try:
+        days = int(request.args.get('days', 30))
+        if days < 1 or days > 180:
+            return jsonify({'success': False, 'message': 'days must be between 1 and 180'}), 400
+
+        result = ScheduleAdherenceInsightsService().get_zone_adherence(days)
+        return jsonify(result), (200 if result.get('success') else 400)
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+@app.route('/api/schedule-adherence/delays', methods=['GET'])
+@login_required
+def get_schedule_delay_indicators():
+    """Get schedule delay indicators."""
+    try:
+        days = int(request.args.get('days', 30))
+        if days < 1 or days > 180:
+            return jsonify({'success': False, 'message': 'days must be between 1 and 180'}), 400
+
+        result = ScheduleAdherenceInsightsService().get_delay_indicators(days)
+        return jsonify(result), (200 if result.get('success') else 400)
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+@app.route('/api/schedule-adherence/recommendations', methods=['GET'])
+@login_required
+def get_schedule_adherence_recommendations():
+    """Get schedule adherence recommendations."""
+    try:
+        days = int(request.args.get('days', 30))
+        if days < 1 or days > 180:
+            return jsonify({'success': False, 'message': 'days must be between 1 and 180'}), 400
+
+        result = ScheduleAdherenceInsightsService().get_adherence_recommendations(days)
         return jsonify(result), (200 if result.get('success') else 400)
     except Exception as e:
         return jsonify({'success': False, 'error': str(e)}), 500
