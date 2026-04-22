@@ -392,6 +392,31 @@
         </div>
     </div>
 
+    <!-- Zone Incident Insights Section -->
+    <div class="row g-3 mb-4">
+        <div class="col-12">
+            <div class="card border-danger">
+                <div class="card-header bg-danger text-white d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0"><i class="bi bi-geo-alt"></i> Zone Incident Insights</h5>
+                    <div>
+                        <button class="btn btn-sm btn-light me-2" onclick="viewZoneIncidentOverview()">
+                            <i class="bi bi-speedometer2"></i> Overview
+                        </button>
+                        <button class="btn btn-sm btn-light me-2" onclick="viewZoneIncidentRanking()">
+                            <i class="bi bi-bar-chart"></i> Zone Ranking
+                        </button>
+                        <button class="btn btn-sm btn-light" onclick="viewZoneIncidentRecommendations()">
+                            <i class="bi bi-lightbulb"></i> Recommendations
+                        </button>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <p class="text-muted"><i class="bi bi-info-circle"></i> Track incident and alert pressure by zone to prioritize service response and reduce unresolved backlog.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- Service Availability Insights Section -->
     <div class="row g-3 mb-4">
         <div class="col-12">
@@ -3098,6 +3123,108 @@ function viewBinHealthRecommendations() {
         },
         error: function() {
             alert('Failed to fetch bin health recommendations.');
+        }
+    });
+}
+
+function viewZoneIncidentOverview() {
+    $.ajax({
+        url: '/api/zone-incidents/overview',
+        type: 'GET',
+        data: { days: 30 },
+        success: function(response) {
+            if (response.success) {
+                const badge = response.incident_status === 'High' ? 'danger' : response.incident_status === 'Medium' ? 'warning' : 'success';
+                const html = `
+                    <div class="table-responsive">
+                        <table class="table table-striped">
+                            <tbody>
+                                <tr><td><strong>Incident Score</strong></td><td><span class="badge bg-${badge}">${response.incident_score}</span></td></tr>
+                                <tr><td><strong>Status</strong></td><td>${response.incident_status}</td></tr>
+                                <tr><td><strong>Total Reports</strong></td><td>${response.total_reports}</td></tr>
+                                <tr><td><strong>Open Reports</strong></td><td>${response.open_reports}</td></tr>
+                                <tr><td><strong>Urgent Reports</strong></td><td>${response.urgent_reports}</td></tr>
+                                <tr><td><strong>Resolution Rate</strong></td><td>${response.resolution_rate}%</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                `;
+                $('#modalTitle').html('<i class="bi bi-geo-alt"></i> Zone Incident Overview');
+                $('#modalBody').html(html);
+                $('#detailsModal').modal('show');
+            } else {
+                alert('Failed to fetch incident overview: ' + response.error);
+            }
+        },
+        error: function() {
+            alert('Failed to fetch incident overview.');
+        }
+    });
+}
+
+function viewZoneIncidentRanking() {
+    $.ajax({
+        url: '/api/zone-incidents/ranking',
+        type: 'GET',
+        data: { days: 30 },
+        success: function(response) {
+            if (response.success) {
+                const zones = response.zones || [];
+                let html = '<div class="table-responsive"><table class="table table-striped table-sm"><thead><tr><th>Zone</th><th>Reports</th><th>Open</th><th>Urgent</th><th>Risk</th></tr></thead><tbody>';
+                zones.forEach(zone => {
+                    const badge = zone.risk_level === 'High' ? 'danger' : zone.risk_level === 'Medium' ? 'warning' : 'success';
+                    html += `<tr>
+                        <td>${zone.zone}</td>
+                        <td>${zone.reports}</td>
+                        <td>${zone.open_reports}</td>
+                        <td>${zone.urgent_reports}</td>
+                        <td><span class="badge bg-${badge}">${zone.risk_level} (${zone.incident_points})</span></td>
+                    </tr>`;
+                });
+                html += '</tbody></table></div>';
+                $('#modalTitle').html('<i class="bi bi-bar-chart"></i> Zone Incident Ranking');
+                $('#modalBody').html(html);
+                $('#detailsModal').modal('show');
+            } else {
+                alert('Failed to fetch zone ranking: ' + response.error);
+            }
+        },
+        error: function() {
+            alert('Failed to fetch zone ranking.');
+        }
+    });
+}
+
+function viewZoneIncidentRecommendations() {
+    $.ajax({
+        url: '/api/zone-incidents/recommendations',
+        type: 'GET',
+        data: { days: 30 },
+        success: function(response) {
+            if (response.success) {
+                const recommendations = response.recommendations || [];
+                let html = '<div class="list-group">';
+                recommendations.forEach(item => {
+                    const badge = item.priority === 'HIGH' ? 'danger' : item.priority === 'MEDIUM' ? 'warning' : 'secondary';
+                    html += `<div class="list-group-item">
+                        <div class="d-flex justify-content-between align-items-center mb-2">
+                            <strong>${item.category}</strong>
+                            <span class="badge bg-${badge}">${item.priority}</span>
+                        </div>
+                        <p class="mb-1">${item.recommendation}</p>
+                        <small class="text-muted"><strong>Action:</strong> ${item.action}</small>
+                    </div>`;
+                });
+                html += '</div>';
+                $('#modalTitle').html('<i class="bi bi-lightbulb"></i> Zone Incident Recommendations');
+                $('#modalBody').html(html);
+                $('#detailsModal').modal('show');
+            } else {
+                alert('Failed to fetch recommendations: ' + response.error);
+            }
+        },
+        error: function() {
+            alert('Failed to fetch zone incident recommendations.');
         }
     });
 }

@@ -52,6 +52,7 @@ from citizen_feedback_analytics import CitizenFeedbackService
 from waste_classification_insights import WasteClassificationService
 from bin_health_insights import BinHealthInsightsService
 from route_risk_insights import RouteRiskInsightsService
+from zone_incident_insights import ZoneIncidentInsightsService
 
 # Load environment variables
 load_dotenv()
@@ -2988,6 +2989,70 @@ def get_bin_health_recommendations():
             return jsonify({'success': False, 'message': 'days must be between 1 and 90'}), 400
 
         result = BinHealthInsightsService().get_health_recommendations(days)
+        return jsonify(result), (200 if result.get('success') else 400)
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+# =============================================
+# ZONE INCIDENT INSIGHTS
+# =============================================
+
+@app.route('/api/zone-incidents/overview', methods=['GET'])
+@login_required
+def get_zone_incident_overview():
+    """Get zone incident overview."""
+    try:
+        days = int(request.args.get('days', 30))
+        if days < 1 or days > 180:
+            return jsonify({'success': False, 'message': 'days must be between 1 and 180'}), 400
+
+        result = ZoneIncidentInsightsService().get_incident_overview(days)
+        return jsonify(result), (200 if result.get('success') else 400)
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+@app.route('/api/zone-incidents/ranking', methods=['GET'])
+@login_required
+def get_zone_incident_ranking():
+    """Get zone incident risk ranking."""
+    try:
+        days = int(request.args.get('days', 30))
+        if days < 1 or days > 180:
+            return jsonify({'success': False, 'message': 'days must be between 1 and 180'}), 400
+
+        result = ZoneIncidentInsightsService().get_zone_incident_ranking(days)
+        return jsonify(result), (200 if result.get('success') else 400)
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+@app.route('/api/zone-incidents/trends', methods=['GET'])
+@login_required
+def get_zone_incident_trends():
+    """Get incident trends over time."""
+    try:
+        days = int(request.args.get('days', 30))
+        if days < 1 or days > 180:
+            return jsonify({'success': False, 'message': 'days must be between 1 and 180'}), 400
+
+        result = ZoneIncidentInsightsService().get_incident_trends(days)
+        return jsonify(result), (200 if result.get('success') else 400)
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+@app.route('/api/zone-incidents/recommendations', methods=['GET'])
+@login_required
+def get_zone_incident_recommendations():
+    """Get zone incident recommendations."""
+    try:
+        days = int(request.args.get('days', 30))
+        if days < 1 or days > 180:
+            return jsonify({'success': False, 'message': 'days must be between 1 and 180'}), 400
+
+        result = ZoneIncidentInsightsService().get_incident_recommendations(days)
         return jsonify(result), (200 if result.get('success') else 400)
     except Exception as e:
         return jsonify({'success': False, 'error': str(e)}), 500
