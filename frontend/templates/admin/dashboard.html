@@ -392,6 +392,31 @@
         </div>
     </div>
 
+    <!-- Fleet Utilization Insights Section -->
+    <div class="row g-3 mb-4">
+        <div class="col-12">
+            <div class="card border-info">
+                <div class="card-header bg-info text-white d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0"><i class="bi bi-truck"></i> Fleet Utilization Insights</h5>
+                    <div>
+                        <button class="btn btn-sm btn-light me-2" onclick="viewFleetUtilizationOverview()">
+                            <i class="bi bi-speedometer2"></i> Overview
+                        </button>
+                        <button class="btn btn-sm btn-light me-2" onclick="viewFleetUtilizationRanking()">
+                            <i class="bi bi-bar-chart"></i> Vehicle Ranking
+                        </button>
+                        <button class="btn btn-sm btn-light" onclick="viewFleetUtilizationRecommendations()">
+                            <i class="bi bi-lightbulb"></i> Recommendations
+                        </button>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <p class="text-muted"><i class="bi bi-info-circle"></i> Measure how effectively the vehicle fleet is used and identify idle assets for better dispatch planning.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- Service Availability Insights Section -->
     <div class="row g-3 mb-4">
         <div class="col-12">
@@ -3098,6 +3123,108 @@ function viewBinHealthRecommendations() {
         },
         error: function() {
             alert('Failed to fetch bin health recommendations.');
+        }
+    });
+}
+
+function viewFleetUtilizationOverview() {
+    $.ajax({
+        url: '/api/fleet-utilization/overview',
+        type: 'GET',
+        data: { days: 30 },
+        success: function(response) {
+            if (response.success) {
+                const badge = response.utilization_status === 'Efficient' ? 'success' : response.utilization_status === 'Moderate' ? 'warning' : 'danger';
+                const html = `
+                    <div class="table-responsive">
+                        <table class="table table-striped">
+                            <tbody>
+                                <tr><td><strong>Utilization Score</strong></td><td><span class="badge bg-${badge}">${response.utilization_score}</span></td></tr>
+                                <tr><td><strong>Status</strong></td><td>${response.utilization_status}</td></tr>
+                                <tr><td><strong>Total Vehicles</strong></td><td>${response.total_vehicles}</td></tr>
+                                <tr><td><strong>Vehicles Used in Routes</strong></td><td>${response.vehicles_used_in_routes}</td></tr>
+                                <tr><td><strong>Utilization Rate</strong></td><td>${response.vehicle_utilization_rate}%</td></tr>
+                                <tr><td><strong>Maintenance Vehicles</strong></td><td>${response.maintenance_vehicles}</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                `;
+                $('#modalTitle').html('<i class="bi bi-truck"></i> Fleet Utilization Overview');
+                $('#modalBody').html(html);
+                $('#detailsModal').modal('show');
+            } else {
+                alert('Failed to fetch utilization overview: ' + response.error);
+            }
+        },
+        error: function() {
+            alert('Failed to fetch utilization overview.');
+        }
+    });
+}
+
+function viewFleetUtilizationRanking() {
+    $.ajax({
+        url: '/api/fleet-utilization/ranking',
+        type: 'GET',
+        data: { days: 30 },
+        success: function(response) {
+            if (response.success) {
+                const vehicles = response.vehicles || [];
+                let html = '<div class="table-responsive"><table class="table table-striped table-sm"><thead><tr><th>Vehicle</th><th>Status</th><th>Routes</th><th>Events</th><th>Score</th></tr></thead><tbody>';
+                vehicles.forEach(v => {
+                    const badge = v.utilization_level === 'High' ? 'success' : v.utilization_level === 'Medium' ? 'warning' : 'secondary';
+                    html += `<tr>
+                        <td>${v.vehicle_number}</td>
+                        <td>${v.status}</td>
+                        <td>${v.route_count}</td>
+                        <td>${v.collection_events}</td>
+                        <td><span class="badge bg-${badge}">${v.utilization_level} (${v.utilization_score})</span></td>
+                    </tr>`;
+                });
+                html += '</tbody></table></div>';
+                $('#modalTitle').html('<i class="bi bi-bar-chart"></i> Fleet Utilization Ranking');
+                $('#modalBody').html(html);
+                $('#detailsModal').modal('show');
+            } else {
+                alert('Failed to fetch utilization ranking: ' + response.error);
+            }
+        },
+        error: function() {
+            alert('Failed to fetch utilization ranking.');
+        }
+    });
+}
+
+function viewFleetUtilizationRecommendations() {
+    $.ajax({
+        url: '/api/fleet-utilization/recommendations',
+        type: 'GET',
+        data: { days: 30 },
+        success: function(response) {
+            if (response.success) {
+                const recommendations = response.recommendations || [];
+                let html = '<div class="list-group">';
+                recommendations.forEach(item => {
+                    const badge = item.priority === 'HIGH' ? 'danger' : item.priority === 'MEDIUM' ? 'warning' : 'secondary';
+                    html += `<div class="list-group-item">
+                        <div class="d-flex justify-content-between align-items-center mb-2">
+                            <strong>${item.category}</strong>
+                            <span class="badge bg-${badge}">${item.priority}</span>
+                        </div>
+                        <p class="mb-1">${item.recommendation}</p>
+                        <small class="text-muted"><strong>Action:</strong> ${item.action}</small>
+                    </div>`;
+                });
+                html += '</div>';
+                $('#modalTitle').html('<i class="bi bi-lightbulb"></i> Fleet Utilization Recommendations');
+                $('#modalBody').html(html);
+                $('#detailsModal').modal('show');
+            } else {
+                alert('Failed to fetch recommendations: ' + response.error);
+            }
+        },
+        error: function() {
+            alert('Failed to fetch fleet utilization recommendations.');
         }
     });
 }
