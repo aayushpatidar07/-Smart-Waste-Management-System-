@@ -53,7 +53,6 @@ from waste_classification_insights import WasteClassificationService
 from bin_health_insights import BinHealthInsightsService
 from route_risk_insights import RouteRiskInsightsService
 from fleet_utilization_insights import FleetUtilizationInsightsService
-from report_quality_insights import ReportQualityInsightsService
 
 # Load environment variables
 load_dotenv()
@@ -3054,70 +3053,6 @@ def get_fleet_utilization_recommendations():
             return jsonify({'success': False, 'message': 'days must be between 1 and 180'}), 400
 
         result = FleetUtilizationInsightsService().get_utilization_recommendations(days)
-        return jsonify(result), (200 if result.get('success') else 400)
-    except Exception as e:
-        return jsonify({'success': False, 'error': str(e)}), 500
-
-
-# =============================================
-# REPORT QUALITY INSIGHTS
-# =============================================
-
-@app.route('/api/report-quality/overview', methods=['GET'])
-@login_required
-def get_report_quality_overview():
-    """Get report quality overview."""
-    try:
-        days = int(request.args.get('days', 30))
-        if days < 1 or days > 180:
-            return jsonify({'success': False, 'message': 'days must be between 1 and 180'}), 400
-
-        result = ReportQualityInsightsService().get_quality_overview(days)
-        return jsonify(result), (200 if result.get('success') else 400)
-    except Exception as e:
-        return jsonify({'success': False, 'error': str(e)}), 500
-
-
-@app.route('/api/report-quality/types', methods=['GET'])
-@login_required
-def get_report_quality_types():
-    """Get report quality by report type."""
-    try:
-        days = int(request.args.get('days', 30))
-        if days < 1 or days > 180:
-            return jsonify({'success': False, 'message': 'days must be between 1 and 180'}), 400
-
-        result = ReportQualityInsightsService().get_report_type_quality(days)
-        return jsonify(result), (200 if result.get('success') else 400)
-    except Exception as e:
-        return jsonify({'success': False, 'error': str(e)}), 500
-
-
-@app.route('/api/report-quality/zones', methods=['GET'])
-@login_required
-def get_report_quality_zones():
-    """Get report quality by zone."""
-    try:
-        days = int(request.args.get('days', 30))
-        if days < 1 or days > 180:
-            return jsonify({'success': False, 'message': 'days must be between 1 and 180'}), 400
-
-        result = ReportQualityInsightsService().get_zone_quality(days)
-        return jsonify(result), (200 if result.get('success') else 400)
-    except Exception as e:
-        return jsonify({'success': False, 'error': str(e)}), 500
-
-
-@app.route('/api/report-quality/recommendations', methods=['GET'])
-@login_required
-def get_report_quality_recommendations():
-    """Get report quality recommendations."""
-    try:
-        days = int(request.args.get('days', 30))
-        if days < 1 or days > 180:
-            return jsonify({'success': False, 'message': 'days must be between 1 and 180'}), 400
-
-        result = ReportQualityInsightsService().get_quality_recommendations(days)
         return jsonify(result), (200 if result.get('success') else 400)
     except Exception as e:
         return jsonify({'success': False, 'error': str(e)}), 500
