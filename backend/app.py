@@ -54,6 +54,7 @@ from bin_health_insights import BinHealthInsightsService
 from route_risk_insights import RouteRiskInsightsService
 from fleet_utilization_insights import FleetUtilizationInsightsService
 from report_quality_insights import ReportQualityInsightsService
+from alert_aging_insights import AlertAgingInsightsService
 
 # Load environment variables
 load_dotenv()
@@ -3118,6 +3119,70 @@ def get_report_quality_recommendations():
             return jsonify({'success': False, 'message': 'days must be between 1 and 180'}), 400
 
         result = ReportQualityInsightsService().get_quality_recommendations(days)
+        return jsonify(result), (200 if result.get('success') else 400)
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+# =============================================
+# ALERT AGING INSIGHTS
+# =============================================
+
+@app.route('/api/alert-aging/overview', methods=['GET'])
+@login_required
+def get_alert_aging_overview():
+    """Get alert aging overview."""
+    try:
+        days = int(request.args.get('days', 30))
+        if days < 1 or days > 180:
+            return jsonify({'success': False, 'message': 'days must be between 1 and 180'}), 400
+
+        result = AlertAgingInsightsService().get_aging_overview(days)
+        return jsonify(result), (200 if result.get('success') else 400)
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+@app.route('/api/alert-aging/buckets', methods=['GET'])
+@login_required
+def get_alert_age_buckets():
+    """Get alert age buckets."""
+    try:
+        days = int(request.args.get('days', 30))
+        if days < 1 or days > 180:
+            return jsonify({'success': False, 'message': 'days must be between 1 and 180'}), 400
+
+        result = AlertAgingInsightsService().get_age_buckets(days)
+        return jsonify(result), (200 if result.get('success') else 400)
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+@app.route('/api/alert-aging/old-alerts', methods=['GET'])
+@login_required
+def get_old_active_alerts():
+    """Get long-running active alerts."""
+    try:
+        days = int(request.args.get('days', 30))
+        if days < 1 or days > 180:
+            return jsonify({'success': False, 'message': 'days must be between 1 and 180'}), 400
+
+        result = AlertAgingInsightsService().get_old_active_alerts(days)
+        return jsonify(result), (200 if result.get('success') else 400)
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+@app.route('/api/alert-aging/recommendations', methods=['GET'])
+@login_required
+def get_alert_aging_recommendations():
+    """Get alert aging recommendations."""
+    try:
+        days = int(request.args.get('days', 30))
+        if days < 1 or days > 180:
+            return jsonify({'success': False, 'message': 'days must be between 1 and 180'}), 400
+
+        result = AlertAgingInsightsService().get_aging_recommendations(days)
         return jsonify(result), (200 if result.get('success') else 400)
     except Exception as e:
         return jsonify({'success': False, 'error': str(e)}), 500
