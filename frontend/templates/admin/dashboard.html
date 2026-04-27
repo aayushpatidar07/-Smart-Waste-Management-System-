@@ -442,6 +442,31 @@
         </div>
     </div>
 
+    <!-- Alert Aging Insights Section -->
+    <div class="row g-3 mb-4">
+        <div class="col-12">
+            <div class="card border-warning">
+                <div class="card-header bg-warning text-dark d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0"><i class="bi bi-hourglass-split"></i> Alert Aging Insights</h5>
+                    <div>
+                        <button class="btn btn-sm btn-light me-2" onclick="viewAlertAgingOverview()">
+                            <i class="bi bi-speedometer2"></i> Overview
+                        </button>
+                        <button class="btn btn-sm btn-light me-2" onclick="viewAlertAgeBuckets()">
+                            <i class="bi bi-pie-chart"></i> Age Buckets
+                        </button>
+                        <button class="btn btn-sm btn-light" onclick="viewAlertAgingRecommendations()">
+                            <i class="bi bi-lightbulb"></i> Recommendations
+                        </button>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <p class="text-muted"><i class="bi bi-info-circle"></i> Monitor how long alerts remain open and prioritize backlog reduction before service quality drops.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- Service Availability Insights Section -->
     <div class="row g-3 mb-4">
         <div class="col-12">
@@ -3352,6 +3377,108 @@ function viewReportQualityRecommendations() {
         },
         error: function() {
             alert('Failed to fetch report quality recommendations.');
+        }
+    });
+}
+
+function viewAlertAgingOverview() {
+    $.ajax({
+        url: '/api/alert-aging/overview',
+        type: 'GET',
+        data: { days: 30 },
+        success: function(response) {
+            if (response.success) {
+                const badge = response.aging_status === 'Healthy' ? 'success' : response.aging_status === 'Watch' ? 'warning' : 'danger';
+                const html = `
+                    <div class="table-responsive">
+                        <table class="table table-striped">
+                            <tbody>
+                                <tr><td><strong>Aging Score</strong></td><td><span class="badge bg-${badge}">${response.aging_score}</span></td></tr>
+                                <tr><td><strong>Status</strong></td><td>${response.aging_status}</td></tr>
+                                <tr><td><strong>Total Alerts</strong></td><td>${response.total_alerts}</td></tr>
+                                <tr><td><strong>Active Alerts</strong></td><td>${response.active_alerts}</td></tr>
+                                <tr><td><strong>Acknowledged Alerts</strong></td><td>${response.acknowledged_alerts}</td></tr>
+                                <tr><td><strong>Open Rate</strong></td><td>${response.open_rate}%</td></tr>
+                                <tr><td><strong>Avg Open Hours</strong></td><td>${response.avg_open_hours}</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                `;
+                $('#modalTitle').html('<i class="bi bi-hourglass-split"></i> Alert Aging Overview');
+                $('#modalBody').html(html);
+                $('#detailsModal').modal('show');
+            } else {
+                alert('Failed to fetch alert aging overview: ' + response.error);
+            }
+        },
+        error: function() {
+            alert('Failed to fetch alert aging overview.');
+        }
+    });
+}
+
+function viewAlertAgeBuckets() {
+    $.ajax({
+        url: '/api/alert-aging/buckets',
+        type: 'GET',
+        data: { days: 30 },
+        success: function(response) {
+            if (response.success) {
+                const buckets = response.age_buckets || [];
+                let html = '<div class="table-responsive"><table class="table table-striped table-sm"><thead><tr><th>Age Bucket</th><th>Count</th><th>Active</th><th>Critical</th><th>Share</th></tr></thead><tbody>';
+                buckets.forEach(bucket => {
+                    html += `<tr>
+                        <td>${bucket.age_bucket}</td>
+                        <td>${bucket.alert_count}</td>
+                        <td>${bucket.active_alerts}</td>
+                        <td>${bucket.critical_alerts}</td>
+                        <td>${bucket.bucket_share}%</td>
+                    </tr>`;
+                });
+                html += '</tbody></table></div>';
+                $('#modalTitle').html('<i class="bi bi-pie-chart"></i> Alert Age Buckets');
+                $('#modalBody').html(html);
+                $('#detailsModal').modal('show');
+            } else {
+                alert('Failed to fetch age buckets: ' + response.error);
+            }
+        },
+        error: function() {
+            alert('Failed to fetch age buckets.');
+        }
+    });
+}
+
+function viewAlertAgingRecommendations() {
+    $.ajax({
+        url: '/api/alert-aging/recommendations',
+        type: 'GET',
+        data: { days: 30 },
+        success: function(response) {
+            if (response.success) {
+                const recommendations = response.recommendations || [];
+                let html = '<div class="list-group">';
+                recommendations.forEach(item => {
+                    const badge = item.priority === 'HIGH' ? 'danger' : item.priority === 'MEDIUM' ? 'warning' : 'secondary';
+                    html += `<div class="list-group-item">
+                        <div class="d-flex justify-content-between align-items-center mb-2">
+                            <strong>${item.category}</strong>
+                            <span class="badge bg-${badge}">${item.priority}</span>
+                        </div>
+                        <p class="mb-1">${item.recommendation}</p>
+                        <small class="text-muted"><strong>Action:</strong> ${item.action}</small>
+                    </div>`;
+                });
+                html += '</div>';
+                $('#modalTitle').html('<i class="bi bi-lightbulb"></i> Alert Aging Recommendations');
+                $('#modalBody').html(html);
+                $('#detailsModal').modal('show');
+            } else {
+                alert('Failed to fetch recommendations: ' + response.error);
+            }
+        },
+        error: function() {
+            alert('Failed to fetch alert aging recommendations.');
         }
     });
 }
