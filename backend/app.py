@@ -55,6 +55,7 @@ from route_risk_insights import RouteRiskInsightsService
 from fleet_utilization_insights import FleetUtilizationInsightsService
 from report_quality_insights import ReportQualityInsightsService
 from alert_aging_insights import AlertAgingInsightsService
+from maintenance_alert_insights import MaintenanceAlertInsightsService
 
 # Load environment variables
 load_dotenv()
@@ -3183,6 +3184,70 @@ def get_alert_aging_recommendations():
             return jsonify({'success': False, 'message': 'days must be between 1 and 180'}), 400
 
         result = AlertAgingInsightsService().get_aging_recommendations(days)
+        return jsonify(result), (200 if result.get('success') else 400)
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+# =============================================
+# MAINTENANCE ALERT INSIGHTS
+# =============================================
+
+@app.route('/api/maintenance-alerts/overview', methods=['GET'])
+@login_required
+def get_maintenance_alert_overview():
+    """Get maintenance alert overview."""
+    try:
+        days = int(request.args.get('days', 30))
+        if days < 1 or days > 180:
+            return jsonify({'success': False, 'message': 'days must be between 1 and 180'}), 400
+
+        result = MaintenanceAlertInsightsService().get_alert_overview(days)
+        return jsonify(result), (200 if result.get('success') else 400)
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+@app.route('/api/maintenance-alerts/bins', methods=['GET'])
+@login_required
+def get_maintenance_alert_bins():
+    """Get bins with maintenance alerts."""
+    try:
+        days = int(request.args.get('days', 30))
+        if days < 1 or days > 180:
+            return jsonify({'success': False, 'message': 'days must be between 1 and 180'}), 400
+
+        result = MaintenanceAlertInsightsService().get_aging_bins(days)
+        return jsonify(result), (200 if result.get('success') else 400)
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+@app.route('/api/maintenance-alerts/zones', methods=['GET'])
+@login_required
+def get_maintenance_alert_zones():
+    """Get zone-level maintenance alert profile."""
+    try:
+        days = int(request.args.get('days', 30))
+        if days < 1 or days > 180:
+            return jsonify({'success': False, 'message': 'days must be between 1 and 180'}), 400
+
+        result = MaintenanceAlertInsightsService().get_zone_alert_profile(days)
+        return jsonify(result), (200 if result.get('success') else 400)
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+@app.route('/api/maintenance-alerts/recommendations', methods=['GET'])
+@login_required
+def get_maintenance_alert_recommendations():
+    """Get maintenance alert recommendations."""
+    try:
+        days = int(request.args.get('days', 30))
+        if days < 1 or days > 180:
+            return jsonify({'success': False, 'message': 'days must be between 1 and 180'}), 400
+
+        result = MaintenanceAlertInsightsService().get_maintenance_alert_recommendations(days)
         return jsonify(result), (200 if result.get('success') else 400)
     except Exception as e:
         return jsonify({'success': False, 'error': str(e)}), 500
