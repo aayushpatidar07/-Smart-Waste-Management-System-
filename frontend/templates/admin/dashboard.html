@@ -338,6 +338,31 @@
         </div>
     </div>
 
+    <!-- Driver Performance Insights Section -->
+    <div class="row g-3 mb-4">
+        <div class="col-12">
+            <div class="card border-dark">
+                <div class="card-header bg-dark text-white d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0"><i class="bi bi-person-badge"></i> Driver Performance Insights</h5>
+                    <div>
+                        <button class="btn btn-sm btn-light me-2" onclick="viewDriverTopPerformers()">
+                            <i class="bi bi-trophy"></i> Top Drivers
+                        </button>
+                        <button class="btn btn-sm btn-light me-2" onclick="viewDriverPerformanceSummary()">
+                            <i class="bi bi-speedometer2"></i> Driver Summary
+                        </button>
+                        <button class="btn btn-sm btn-light" onclick="viewDriverPerformance90Day()">
+                            <i class="bi bi-calendar3"></i> 90-Day View
+                        </button>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <p class="text-muted"><i class="bi bi-info-circle"></i> Review driver efficiency, trip productivity, and top-performing staff using the existing driver performance APIs.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- Compliance & Regulatory Reporting Section -->
     <div class="row g-3 mb-4">
         <div class="col-12">
@@ -4207,6 +4232,103 @@ function viewSystemHealth() {
 
 function downloadJSON() {
     alert('JSON export initiating... Check your downloads folder.');
+}
+
+function viewDriverPerformanceSummary() {
+    const driverId = prompt('Enter driver ID to view performance summary:');
+    if (!driverId) return;
+
+    const days = prompt('Enter analysis period in days (1-365):', '30') || '30';
+    $.ajax({
+        url: `/api/drivers/${driverId}/performance?days=${encodeURIComponent(days)}`,
+        type: 'GET',
+        success: function(result) {
+            if (result.success) {
+                const ratingColor = result.performance_rating === 'Excellent' ? 'success' : result.performance_rating === 'Good' ? 'primary' : result.performance_rating === 'Average' ? 'warning' : 'danger';
+                const html = `
+                    <div class="row g-3">
+                        <div class="col-md-4"><div class="border rounded p-3 text-center"><div class="text-muted small">Trips</div><div class="h3 mb-0">${result.total_trips || 0}</div></div></div>
+                        <div class="col-md-4"><div class="border rounded p-3 text-center"><div class="text-muted small">Avg Efficiency</div><div class="h3 mb-0 text-primary">${result.average_efficiency || 0}</div></div></div>
+                        <div class="col-md-4"><div class="border rounded p-3 text-center"><div class="text-muted small">Rating</div><div class="h3 mb-0 text-${ratingColor}">${result.performance_rating || 'N/A'}</div></div></div>
+                    </div>
+                    <hr>
+                    <div class="row g-3">
+                        <div class="col-md-6"><strong>Driver:</strong> ${result.driver_name || 'Unknown'} (#${result.driver_id || driverId})</div>
+                        <div class="col-md-6"><strong>Period:</strong> ${result.period_days || days} days</div>
+                        <div class="col-md-6"><strong>Total Bins:</strong> ${result.total_bins_collected || 0}</div>
+                        <div class="col-md-6"><strong>Distance:</strong> ${result.total_distance_km || 0} km</div>
+                        <div class="col-md-6"><strong>Fuel:</strong> ${result.total_fuel_liters || 0} L</div>
+                        <div class="col-md-6"><strong>Avg Trip Time:</strong> ${result.average_trip_time_minutes || 0} mins</div>
+                    </div>
+                `;
+                document.getElementById('modalBody').innerHTML = html;
+                new bootstrap.Modal(document.getElementById('detailsModal')).show();
+            }
+        },
+        error: function(xhr) {
+            const message = xhr.responseJSON?.message || xhr.responseJSON?.error || 'Unable to load driver summary';
+            showError(message);
+        }
+    });
+}
+
+function viewDriverPerformance90Day() {
+    const driverId = prompt('Enter driver ID for a 90-day performance view:');
+    if (!driverId) return;
+
+    $.ajax({
+        url: `/api/drivers/${driverId}/performance?days=90`,
+        type: 'GET',
+        success: function(result) {
+            if (result.success) {
+                const html = `
+                    <p><strong>Driver:</strong> ${result.driver_name || 'Unknown'} (#${result.driver_id || driverId})</p>
+                    <p><strong>Period:</strong> ${result.period_days || 90} days</p>
+                    <div class="progress mb-3">
+                        <div class="progress-bar bg-success" style="width: ${Math.min(100, Math.round((result.average_efficiency || 0) * 100))}%"></div>
+                    </div>
+                    <p><strong>Performance Rating:</strong> <span class="badge bg-primary">${result.performance_rating || 'N/A'}</span></p>
+                    <p><strong>Trips:</strong> ${result.total_trips || 0} | <strong>Bins:</strong> ${result.total_bins_collected || 0}</p>
+                    <p><strong>Fuel Efficiency:</strong> ${result.average_fuel_efficiency || 0}</p>
+                `;
+                document.getElementById('modalBody').innerHTML = html;
+                new bootstrap.Modal(document.getElementById('detailsModal')).show();
+            }
+        },
+        error: function(xhr) {
+            const message = xhr.responseJSON?.message || xhr.responseJSON?.error || 'Unable to load 90-day driver view';
+            showError(message);
+        }
+    });
+}
+
+function viewDriverTopPerformers() {
+    $.ajax({
+        url: '/api/drivers/top-performers?limit=5&days=30',
+        type: 'GET',
+        success: function(result) {
+            if (result.success) {
+                let rows = '';
+                (result.top_drivers || []).forEach(driver => {
+                    rows += `<tr><td>${driver.rank || '-'}</td><td>${driver.driver_name || '-'}</td><td>${driver.trips || 0}</td><td>${driver.average_efficiency || 0}</td><td>${driver.total_bins || 0}</td></tr>`;
+                });
+                const html = `
+                    <div class="table-responsive">
+                        <table class="table table-striped table-sm mb-0">
+                            <thead><tr><th>Rank</th><th>Driver</th><th>Trips</th><th>Avg Efficiency</th><th>Total Bins</th></tr></thead>
+                            <tbody>${rows || '<tr><td colspan="5" class="text-center">No driver data available</td></tr>'}</tbody>
+                        </table>
+                    </div>
+                `;
+                document.getElementById('modalBody').innerHTML = html;
+                new bootstrap.Modal(document.getElementById('detailsModal')).show();
+            }
+        },
+        error: function(xhr) {
+            const message = xhr.responseJSON?.message || xhr.responseJSON?.error || 'Unable to load top drivers';
+            showError(message);
+        }
+    });
 }
 
 function downloadCSV() {
