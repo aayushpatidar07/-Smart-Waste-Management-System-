@@ -774,6 +774,31 @@
             </div>
         </div>
     </div>
+
+    <!-- Resource Utilization Insights Section -->
+    <div class="row g-3 mb-4">
+        <div class="col-12">
+            <div class="card border-success">
+                <div class="card-header bg-success text-white d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0"><i class="bi bi-boxes"></i> Resource Utilization Insights</h5>
+                    <div>
+                        <button class="btn btn-sm btn-light me-2" onclick="viewBinUtilization()">
+                            <i class="bi bi-percent"></i> Bin Utilization
+                        </button>
+                        <button class="btn btn-sm btn-light me-2" onclick="viewRouteResourceEff()">
+                            <i class="bi bi-route"></i> Route Efficiency
+                        </button>
+                        <button class="btn btn-sm btn-light" onclick="viewUnderutilizedResources()">
+                            <i class="bi bi-exclamation-diamond"></i> Underutilized Assets
+                        </button>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <p class="text-muted"><i class="bi bi-info-circle"></i> Monitor bin fill rates, route efficiency metrics, and identify underutilized resources to optimize operational capacity.</p>
+                </div>
+            </div>
+        </div>
+    </div>
 </div>
 {% endblock %}
 
@@ -4334,5 +4359,103 @@ function viewDriverTopPerformers() {
 function downloadCSV() {
     alert('CSV export initiating... Check your downloads folder.');
 }
+
+function viewBinUtilization() {
+    const binId = prompt('Enter bin ID to view utilization analysis:');
+    if (!binId) return;
+
+    const days = prompt('Enter analysis period in days (1-365):', '30') || '30';
+    $.ajax({
+        url: `/api/bins/${binId}/utilization?days=${encodeURIComponent(days)}`,
+        type: 'GET',
+        success: function(result) {
+            if (result.success) {
+                const html = `
+                    <div class="row g-3">
+                        <div class="col-md-4"><div class="border rounded p-3 text-center"><div class="text-muted small">Avg Fill Level</div><div class="h3 mb-0 text-primary">${result.average_fill_level || 0}%</div></div></div>
+                        <div class="col-md-4"><div class="border rounded p-3 text-center"><div class="text-muted small">Collections</div><div class="h3 mb-0">${result.total_collections || 0}</div></div></div>
+                        <div class="col-md-4"><div class="border rounded p-3 text-center"><div class="text-muted small">Utilization Rate</div><div class="h3 mb-0 text-success">${result.utilization_rate || 0}%</div></div></div>
+                    </div>
+                    <hr>
+                    <p><strong>Bin:</strong> ${result.bin_id || binId} | <strong>Period:</strong> ${result.period_days || days} days</p>
+                    <p><strong>Peak Fill:</strong> ${result.peak_fill_level || 0}% | <strong>Min Fill:</strong> ${result.min_fill_level || 0}%</p>
+                    <p><strong>Status:</strong> <span class="badge bg-${result.status === 'Optimal' ? 'success' : result.status === 'Good' ? 'info' : result.status === 'Fair' ? 'warning' : 'danger'}">${result.status || 'N/A'}</span></p>
+                `;
+                document.getElementById('modalBody').innerHTML = html;
+                new bootstrap.Modal(document.getElementById('detailsModal')).show();
+            }
+        },
+        error: function(xhr) {
+            const message = xhr.responseJSON?.message || xhr.responseJSON?.error || 'Unable to load bin utilization';
+            showError(message);
+        }
+    });
+}
+
+function viewRouteResourceEff() {
+    const routeId = prompt('Enter route ID to view resource efficiency:');
+    if (!routeId) return;
+
+    const days = prompt('Enter analysis period in days (1-365):', '30') || '30';
+    $.ajax({
+        url: `/api/routes/${routeId}/resource-efficiency?days=${encodeURIComponent(days)}`,
+        type: 'GET',
+        success: function(result) {
+            if (result.success) {
+                const html = `
+                    <p><strong>Route:</strong> ${result.route_id || routeId}</p>
+                    <p><strong>Period:</strong> ${result.period_days || days} days</p>
+                    <div class="progress mb-3">
+                        <div class="progress-bar bg-success" style="width: ${Math.min(100, (result.efficiency_score || 0))}%"></div>
+                    </div>
+                    <p><strong>Efficiency Score:</strong> ${result.efficiency_score || 0}% | <strong>Status:</strong> <span class="badge bg-info">${result.status || 'N/A'}</span></p>
+                    <p><strong>Bins per Route:</strong> ${result.avg_bins_per_trip || 0}</p>
+                    <p><strong>Distance (km):</strong> ${result.total_distance || 0}</p>
+                `;
+                document.getElementById('modalBody').innerHTML = html;
+                new bootstrap.Modal(document.getElementById('detailsModal')).show();
+            }
+        },
+        error: function(xhr) {
+            const message = xhr.responseJSON?.message || xhr.responseJSON?.error || 'Unable to load route efficiency';
+            showError(message);
+        }
+    });
+}
+
+function viewUnderutilizedResources() {
+    const threshold = prompt('Enter utilization threshold % (e.g., 50):', '50') || '50';
+    const days = prompt('Enter analysis period in days (1-365):', '30') || '30';
+    
+    $.ajax({
+        url: `/api/resources/underutilized?threshold=${encodeURIComponent(threshold)}&days=${encodeURIComponent(days)}`,
+        type: 'GET',
+        success: function(result) {
+            if (result.success) {
+                let resourceRows = '';
+                (result.resources || []).forEach(res => {
+                    resourceRows += `<tr><td>${res.resource_id || '-'}</td><td>${res.resource_type || '-'}</td><td>${res.utilization_rate || 0}%</td><td>${res.location || '-'}</td></tr>`;
+                });
+                const html = `
+                    <p><strong>Threshold:</strong> ${threshold}% | <strong>Period:</strong> ${days} days</p>
+                    <p><strong>Resources Found:</strong> ${result.resource_count || 0}</p>
+                    <div class="table-responsive">
+                        <table class="table table-sm table-striped">
+                            <thead><tr><th>ID</th><th>Type</th><th>Utilization</th><th>Location</th></tr></thead>
+                            <tbody>${resourceRows || '<tr><td colspan="4" class="text-center">No underutilized resources found</td></tr>'}</tbody>
+                        </table>
+                    </div>
+                `;
+                document.getElementById('modalBody').innerHTML = html;
+                new bootstrap.Modal(document.getElementById('detailsModal')).show();
+            }
+        },
+        error: function(xhr) {
+            const message = xhr.responseJSON?.message || xhr.responseJSON?.error || 'Unable to load underutilized resources';
+            showError(message);
+        }
+    });
+}
+
 </script>
 {% endblock %}
