@@ -616,6 +616,31 @@
         </div>
     </div>
 
+    <!-- Waste Composition Analysis Section -->
+    <div class="row g-3 mb-4">
+        <div class="col-12">
+            <div class="card border-secondary">
+                <div class="card-header bg-secondary text-white d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0"><i class="bi bi-graph-up"></i> Waste Composition Analysis</h5>
+                    <div>
+                        <button class="btn btn-sm btn-light me-2" onclick="viewCompositionBinSummary()">
+                            <i class="bi bi-box-seam"></i> Bin Summary
+                        </button>
+                        <button class="btn btn-sm btn-light me-2" onclick="viewCompositionZoneAnalysis()">
+                            <i class="bi bi-geo-alt"></i> Zone Analysis
+                        </button>
+                        <button class="btn btn-sm btn-light" onclick="viewCompositionTrends()">
+                            <i class="bi bi-line-chart"></i> Trends
+                        </button>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <p class="text-muted"><i class="bi bi-info-circle"></i> Track waste type distribution, material composition insights, and zone-level waste stream patterns for source reduction.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- Environmental Impact Insights Section -->
     <div class="row g-3 mb-4">
         <div class="col-12">
@@ -2403,6 +2428,107 @@ function viewAuditBacklog() {
         },
         error: function() {
             alert('Failed to fetch audit backlog.');
+        }
+    });
+}
+
+// Waste Composition Analysis Functions
+
+function viewCompositionBinSummary() {
+    const binId = prompt('Enter bin ID to view waste composition:');
+    if (!binId) return;
+
+    const days = prompt('Enter analysis period in days (1-365):', '30') || '30';
+    $.ajax({
+        url: `/api/waste-composition/${binId}/summary?days=${encodeURIComponent(days)}`,
+        type: 'GET',
+        success: function(result) {
+            if (result.success) {
+                let compositionHtml = '';
+                (result.composition || []).forEach(item => {
+                    compositionHtml += `<div class="mb-2"><small><strong>${item.waste_type}:</strong> ${item.percentage}% (${item.quantity_kg || 0}kg)</small></div>`;
+                });
+                const html = `
+                    <p><strong>Bin:</strong> ${result.bin_id || binId} | <strong>Period:</strong> ${days} days</p>
+                    <p><strong>Total Waste:</strong> ${result.total_quantity || 0}kg | <strong>Samples:</strong> ${result.sample_count || 0}</p>
+                    <hr>
+                    <h6>Composition Breakdown:</h6>
+                    ${compositionHtml || '<p class="text-muted">No composition data available</p>'}
+                    <hr>
+                    <p><strong>Primary Type:</strong> <span class="badge bg-info">${result.primary_waste_type || 'N/A'}</span></p>
+                `;
+                document.getElementById('modalBody').innerHTML = html;
+                new bootstrap.Modal(document.getElementById('detailsModal')).show();
+            }
+        },
+        error: function(xhr) {
+            const message = xhr.responseJSON?.message || xhr.responseJSON?.error || 'Unable to load bin composition';
+            showError(message);
+        }
+    });
+}
+
+function viewCompositionZoneAnalysis() {
+    const zone = prompt('Enter zone name to view waste composition:');
+    if (!zone) return;
+
+    const days = prompt('Enter analysis period in days (1-365):', '30') || '30';
+    $.ajax({
+        url: `/api/waste-composition/zone/${encodeURIComponent(zone)}?days=${encodeURIComponent(days)}`,
+        type: 'GET',
+        success: function(result) {
+            if (result.success) {
+                let compositionHtml = '';
+                (result.composition || []).forEach(item => {
+                    compositionHtml += `<tr><td>${item.waste_type}</td><td>${item.percentage}%</td><td>${item.quantity_kg || 0}kg</td><td>${item.bin_count || 0}</td></tr>`;
+                });
+                const html = `
+                    <p><strong>Zone:</strong> ${zone} | <strong>Period:</strong> ${days} days</p>
+                    <p><strong>Total Bins Sampled:</strong> ${result.bin_count || 0}</p>
+                    <div class="table-responsive">
+                        <table class="table table-sm table-striped">
+                            <thead><tr><th>Waste Type</th><th>Percentage</th><th>Quantity (kg)</th><th>Bins</th></tr></thead>
+                            <tbody>${compositionHtml || '<tr><td colspan="4" class="text-center">No composition data</td></tr>'}</tbody>
+                        </table>
+                    </div>
+                `;
+                document.getElementById('modalBody').innerHTML = html;
+                new bootstrap.Modal(document.getElementById('detailsModal')).show();
+            }
+        },
+        error: function(xhr) {
+            const message = xhr.responseJSON?.message || xhr.responseJSON?.error || 'Unable to load zone composition';
+            showError(message);
+        }
+    });
+}
+
+function viewCompositionTrends() {
+    const zone = prompt('Enter zone name for composition trends (optional):', '');
+    const days = prompt('Enter analysis period in days (1-365):', '30') || '30';
+    
+    $.ajax({
+        url: `/api/waste-composition${zone ? '/zone/' + encodeURIComponent(zone) : ''}/trends?days=${encodeURIComponent(days)}`,
+        type: 'GET',
+        success: function(result) {
+            if (result.success) {
+                let trendsHtml = '';
+                (result.trends || []).forEach(item => {
+                    const direction = item.trend === 'increasing' ? '📈' : item.trend === 'decreasing' ? '📉' : '→';
+                    trendsHtml += `<div class="mb-2"><small><strong>${item.waste_type}:</strong> ${direction} ${Math.abs(item.change_percent || 0)}% change</small></div>`;
+                });
+                const html = `
+                    <p><strong>Period:</strong> ${days} days ${zone ? '| Zone: ' + zone : ''}</p>
+                    <h6>Composition Trends:</h6>
+                    ${trendsHtml || '<p class="text-muted">No trend data available</p>'}
+                `;
+                document.getElementById('modalBody').innerHTML = html;
+                new bootstrap.Modal(document.getElementById('detailsModal')).show();
+            }
+        },
+        error: function(xhr) {
+            const message = xhr.responseJSON?.message || xhr.responseJSON?.error || 'Unable to load composition trends';
+            showError(message);
         }
     });
 }
