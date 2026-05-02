@@ -775,6 +775,31 @@
         </div>
     </div>
 
+    <!-- Collection Alerts Management Section -->
+    <div class="row g-3 mb-4">
+        <div class="col-12">
+            <div class="card border-warning">
+                <div class="card-header bg-warning text-dark d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0"><i class="bi bi-bell"></i> Collection Alerts</h5>
+                    <div>
+                        <button class="btn btn-sm btn-dark me-2" onclick="viewActiveCollectionAlerts()">
+                            <i class="bi bi-bell-fill"></i> Active Alerts
+                        </button>
+                        <button class="btn btn-sm btn-dark me-2" onclick="viewAlertsForBin()">
+                            <i class="bi bi-geo-alt"></i> Alerts by Bin
+                        </button>
+                        <button class="btn btn-sm btn-dark" onclick="resolveAlertPrompt()">
+                            <i class="bi bi-check2-circle"></i> Resolve Alert
+                        </button>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <p class="text-muted"><i class="bi bi-info-circle"></i> Inspect active collection alerts, search alerts for a specific bin, and resolve alerts from the dashboard.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- Data Quality Assessment Section -->
     <div class="row g-3 mb-4">
         <div class="col-12">
@@ -1858,6 +1883,123 @@ function resolveAlert(alertId) {
         error: function() {
             alert('Failed to resolve alert');
         }
+    });
+}
+
+// Collection Alerts viewers (dashboard)
+function viewActiveCollectionAlerts() {
+    $.ajax({
+        url: '/api/alerts/active',
+        type: 'GET',
+        success: function(result) {
+            if (result.alerts) {
+                let rows = '';
+                result.alerts.forEach(a => {
+                    rows += `<tr><td>${a.id}</td><td>${a.bin_id}</td><td>${a.alert_type}</td><td>${a.priority}</td><td>${a.message}</td><td>${a.created_at}</td></tr>`;
+                });
+
+                const html = `
+                    <div class="table-responsive">
+                        <table class="table table-sm">
+                            <thead><tr><th>ID</th><th>Bin</th><th>Type</th><th>Priority</th><th>Message</th><th>Raised</th></tr></thead>
+                            <tbody>${rows}</tbody>
+                        </table>
+                    </div>`;
+
+                $('#collectionAlertsModal').remove();
+                const modal = `
+                    <div class="modal fade" id="collectionAlertsModal" tabindex="-1">
+                        <div class="modal-dialog modal-lg">
+                            <div class="modal-content">
+                                <div class="modal-header bg-warning text-dark">
+                                    <h5 class="modal-title">Active Collection Alerts</h5>
+                                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                                </div>
+                                <div class="modal-body">${html}</div>
+                                <div class="modal-footer">
+                                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>`;
+                $('body').append(modal);
+                new bootstrap.Modal(document.getElementById('collectionAlertsModal')).show();
+            } else {
+                alert('No active alerts available');
+            }
+        },
+        error: function() { alert('Failed to load active collection alerts'); }
+    });
+}
+
+function viewAlertsForBin() {
+    const binId = prompt('Enter Bin ID to search alerts:');
+    if (!binId) return;
+
+    $.ajax({
+        url: `/api/alerts/bin/${binId}`,
+        type: 'GET',
+        success: function(result) {
+            if (result.alerts) {
+                let rows = '';
+                result.alerts.forEach(a => {
+                    rows += `<tr><td>${a.id}</td><td>${a.alert_type}</td><td>${a.priority}</td><td>${a.message}</td><td>${a.resolved ? 'Yes' : 'No'}</td></tr>`;
+                });
+
+                const html = `
+                    <div class="table-responsive">
+                        <table class="table table-sm">
+                            <thead><tr><th>ID</th><th>Type</th><th>Priority</th><th>Message</th><th>Resolved</th></tr></thead>
+                            <tbody>${rows}</tbody>
+                        </table>
+                    </div>`;
+
+                $('#binAlertsModal').remove();
+                const modal = `
+                    <div class="modal fade" id="binAlertsModal" tabindex="-1">
+                        <div class="modal-dialog modal-lg">
+                            <div class="modal-content">
+                                <div class="modal-header bg-warning text-dark">
+                                    <h5 class="modal-title">Alerts for Bin ${binId}</h5>
+                                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                                </div>
+                                <div class="modal-body">${html}</div>
+                                <div class="modal-footer">
+                                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>`;
+                $('body').append(modal);
+                new bootstrap.Modal(document.getElementById('binAlertsModal')).show();
+            } else {
+                alert('No alerts found for the specified bin');
+            }
+        },
+        error: function() { alert('Failed to load alerts for bin'); }
+    });
+}
+
+function resolveAlertPrompt() {
+    const alertId = prompt('Enter Alert ID to resolve:');
+    if (!alertId) return;
+    const notes = prompt('Any resolution notes? (optional)');
+
+    $.ajax({
+        url: `/api/alerts/${alertId}/resolve`,
+        type: 'POST',
+        contentType: 'application/json',
+        data: JSON.stringify({ resolution_notes: notes || '' }),
+        success: function(result) {
+            if (result.success) {
+                alert(`Alert ${alertId} resolved`);
+                loadAlerts();
+                loadDashboardStats();
+            } else {
+                alert(`Failed: ${result.message || result.error}`);
+            }
+        },
+        error: function() { alert('Failed to resolve alert'); }
     });
 }
 
