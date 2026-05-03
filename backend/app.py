@@ -8,7 +8,7 @@ Author: Smart Waste Team
 ============================================
 """
 
-from flask import Flask, render_template, request, jsonify, session, redirect, url_for
+from flask import Flask, render_template, request, jsonify, session, redirect, url_for, Response
 from flask_cors import CORS
 from functools import wraps
 import os
@@ -18,6 +18,8 @@ from datetime import datetime, timedelta
 import json
 import logging
 from logging.handlers import RotatingFileHandler
+import io
+import csv
 
 # Add backend directory to path for imports
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
@@ -2451,6 +2453,51 @@ def get_productivity_recommendations():
 
         result = CollectionProductivityService().get_productivity_recommendations(days)
         return jsonify(result), (200 if result.get('success') else 400)
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+@app.route('/api/productivity/vehicles/export', methods=['GET'])
+@login_required
+def export_vehicle_productivity_csv():
+    """Export vehicle productivity ranking as CSV."""
+    try:
+        days = int(request.args.get('days', 30))
+        limit = int(request.args.get('limit', 100))
+        if days < 1 or days > 365:
+            return jsonify({'success': False, 'message': 'days must be between 1 and 365'}), 400
+        if limit < 1 or limit > 1000:
+            return jsonify({'success': False, 'message': 'limit must be between 1 and 1000'}), 400
+
+        result = CollectionProductivityService().get_vehicle_productivity(days, limit)
+        if not result.get('success'):
+            return jsonify(result), 400
+
+        vehicles = result.get('vehicles', [])
+
+        output = io.StringIO()
+        writer = csv.writer(output)
+        # Header row
+        writer.writerow(['Rank', 'Vehicle Number', 'Driver Name', 'Collections', 'Waste Collected (kg)', 'Routes Served'])
+
+        for v in vehicles:
+            writer.writerow([
+                v.get('rank'),
+                v.get('vehicle_number'),
+                v.get('driver_name') or '',
+                v.get('collections') or 0,
+                v.get('waste_collected') or 0,
+                v.get('routes_served') or ''
+            ])
+
+        csv_data = output.getvalue()
+        output.close()
+
+        headers = {
+            'Content-Type': 'text/csv; charset=utf-8',
+            'Content-Disposition': f'attachment; filename="vehicle_productivity_{days}d.csv"'
+        }
+        return Response(csv_data, headers=headers)
     except Exception as e:
         return jsonify({'success': False, 'error': str(e)}), 500
 
