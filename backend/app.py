@@ -2427,6 +2427,48 @@ def get_route_productivity_insights():
         return jsonify({'success': False, 'error': str(e)}), 500
 
 
+@app.route('/api/productivity/routes/export', methods=['GET'])
+@login_required
+def export_route_productivity_csv():
+    """Export route productivity breakdown as CSV."""
+    try:
+        days = int(request.args.get('days', 30))
+        if days < 1 or days > 180:
+            return jsonify({'success': False, 'message': 'days must be between 1 and 180'}), 400
+
+        result = CollectionProductivityService().get_route_productivity(days)
+        if not result.get('success'):
+            return jsonify(result), 400
+
+        routes = result.get('routes', [])
+
+        output = io.StringIO()
+        writer = csv.writer(output)
+        writer.writerow(['Route ID', 'Route Name', 'Status', 'Total Bins', 'Bins Collected', 'Completion Percent', 'Distance (km)'])
+
+        for route in routes:
+            writer.writerow([
+                route.get('route_id'),
+                route.get('route_name'),
+                route.get('status') or '',
+                route.get('total_bins') or 0,
+                route.get('bins_collected') or 0,
+                route.get('completion_percent') or 0,
+                route.get('distance_km') or 0,
+            ])
+
+        csv_data = output.getvalue()
+        output.close()
+
+        headers = {
+            'Content-Type': 'text/csv; charset=utf-8',
+            'Content-Disposition': f'attachment; filename="route_productivity_{days}d.csv"'
+        }
+        return Response(csv_data, headers=headers)
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
 @app.route('/api/productivity/zones', methods=['GET'])
 @login_required
 def get_zone_productivity_insights():
