@@ -2484,6 +2484,48 @@ def get_zone_productivity_insights():
         return jsonify({'success': False, 'error': str(e)}), 500
 
 
+@app.route('/api/productivity/zones/export', methods=['GET'])
+@login_required
+def export_zone_productivity_csv():
+    """Export zone productivity metrics as CSV."""
+    try:
+        days = int(request.args.get('days', 30))
+        if days < 1 or days > 180:
+            return jsonify({'success': False, 'message': 'days must be between 1 and 180'}), 400
+
+        result = CollectionProductivityService().get_zone_productivity(days)
+        if not result.get('success'):
+            return jsonify(result), 400
+
+        zones = result.get('zones', [])
+
+        output = io.StringIO()
+        writer = csv.writer(output)
+        writer.writerow(['Zone', 'Collections', 'Waste Collected (kg)', 'Vehicles Used', 'Avg Before Level', 'Avg After Level', 'Avg Reduction'])
+
+        for zone in zones:
+            writer.writerow([
+                zone.get('zone'),
+                zone.get('collections') or 0,
+                zone.get('waste_collected') or 0,
+                zone.get('vehicles_used') or 0,
+                zone.get('avg_before_level') or 0,
+                zone.get('avg_after_level') or 0,
+                zone.get('avg_reduction') or 0,
+            ])
+
+        csv_data = output.getvalue()
+        output.close()
+
+        headers = {
+            'Content-Type': 'text/csv; charset=utf-8',
+            'Content-Disposition': f'attachment; filename="zone_productivity_{days}d.csv"'
+        }
+        return Response(csv_data, headers=headers)
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
 @app.route('/api/productivity/recommendations', methods=['GET'])
 @login_required
 def get_productivity_recommendations():
