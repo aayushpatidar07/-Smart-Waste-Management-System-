@@ -2541,6 +2541,44 @@ def get_productivity_recommendations():
         return jsonify({'success': False, 'error': str(e)}), 500
 
 
+@app.route('/api/productivity/recommendations/export', methods=['GET'])
+@login_required
+def export_productivity_recommendations_csv():
+    """Export productivity recommendations as CSV."""
+    try:
+        days = int(request.args.get('days', 30))
+        if days < 1 or days > 180:
+            return jsonify({'success': False, 'message': 'days must be between 1 and 180'}), 400
+
+        result = CollectionProductivityService().get_productivity_recommendations(days)
+        if not result.get('success'):
+            return jsonify(result), 400
+
+        recommendations = result.get('recommendations', [])
+
+        output = io.StringIO()
+        writer = csv.writer(output)
+        writer.writerow(['Priority', 'Title', 'Message'])
+
+        for rec in recommendations:
+            writer.writerow([
+                rec.get('priority'),
+                rec.get('title'),
+                rec.get('message'),
+            ])
+
+        csv_data = output.getvalue()
+        output.close()
+
+        headers = {
+            'Content-Type': 'text/csv; charset=utf-8',
+            'Content-Disposition': f'attachment; filename="productivity_recommendations_{days}d.csv"'
+        }
+        return Response(csv_data, headers=headers)
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
 @app.route('/api/productivity/vehicles/export', methods=['GET'])
 @login_required
 def export_vehicle_productivity_csv():
