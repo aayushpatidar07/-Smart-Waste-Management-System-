@@ -2394,6 +2394,49 @@ def get_collection_productivity_overview():
         return jsonify({'success': False, 'error': str(e)}), 500
 
 
+@app.route('/api/productivity/overview/export', methods=['GET'])
+@login_required
+def export_productivity_overview_csv():
+    """Export collection productivity overview as CSV."""
+    try:
+        days = int(request.args.get('days', 30))
+        if days < 1 or days > 180:
+            return jsonify({'success': False, 'message': 'days must be between 1 and 180'}), 400
+
+        result = CollectionProductivityService().get_productivity_overview(days)
+        if not result.get('success'):
+            return jsonify(result), 400
+
+        output = io.StringIO()
+        writer = csv.writer(output)
+        writer.writerow(['Metric', 'Value'])
+
+        metrics = [
+            ('Period (days)', result.get('period_days')),
+            ('Total Collections', result.get('total_collections')),
+            ('Active Vehicles', result.get('active_vehicles')),
+            ('Active Routes', result.get('active_routes')),
+            ('Total Waste (kg)', result.get('total_waste')),
+            ('Avg Waste per Collection (kg)', result.get('avg_waste_per_collection')),
+            ('Avg Level Reduction (%)', result.get('avg_level_reduction')),
+            ('Daily Throughput', result.get('daily_throughput')),
+        ]
+
+        for metric, value in metrics:
+            writer.writerow([metric, value])
+
+        csv_data = output.getvalue()
+        output.close()
+
+        headers = {
+            'Content-Type': 'text/csv; charset=utf-8',
+            'Content-Disposition': f'attachment; filename="productivity_overview_{days}d.csv"'
+        }
+        return Response(csv_data, headers=headers)
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
 @app.route('/api/productivity/vehicles', methods=['GET'])
 @login_required
 def get_vehicle_productivity_ranking():
