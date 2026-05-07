@@ -557,6 +557,21 @@
                         <button class="btn btn-sm btn-light" onclick="viewProductivityRecommendations()">
                             <i class="bi bi-lightbulb"></i> Recommendations
                         </button>
+                        <button class="btn btn-sm btn-outline-light" onclick="downloadProductivityOverviewCSV()">
+                            <i class="bi bi-download"></i> Overview CSV
+                        </button>
+                        <button class="btn btn-sm btn-outline-light" onclick="downloadVehicleProductivityCSV()">
+                            <i class="bi bi-download"></i> Vehicle CSV
+                        </button>
+                        <button class="btn btn-sm btn-outline-light" onclick="downloadRouteProductivityCSV()">
+                            <i class="bi bi-download"></i> Route CSV
+                        </button>
+                        <button class="btn btn-sm btn-outline-light" onclick="downloadZoneProductivityCSV()">
+                            <i class="bi bi-download"></i> Zone CSV
+                        </button>
+                        <button class="btn btn-sm btn-outline-light" onclick="downloadRecommendationsCSV()">
+                            <i class="bi bi-download"></i> Recs CSV
+                        </button>
                     </div>
                 </div>
                 <div class="card-body">
@@ -2405,6 +2420,43 @@ function viewProductivityRecommendations() {
             alert('Failed to fetch productivity recommendations.');
         }
     });
+}
+
+// Productivity CSV Download Functions
+
+function downloadProductivityOverviewCSV() {
+    const days = prompt('Overview window (days):', '30');
+    if (!days || isNaN(days) || days < 1 || days > 180) return;
+    const url = `/api/productivity/overview/export?days=${days}`;
+    window.location.href = url;
+}
+
+function downloadVehicleProductivityCSV() {
+    const days = prompt('Vehicle ranking window (days):', '30');
+    if (!days || isNaN(days) || days < 1 || days > 180) return;
+    const url = `/api/productivity/vehicles/export?days=${days}&limit=100`;
+    window.location.href = url;
+}
+
+function downloadRouteProductivityCSV() {
+    const days = prompt('Route productivity window (days):', '30');
+    if (!days || isNaN(days) || days < 1 || days > 180) return;
+    const url = `/api/productivity/routes/export?days=${days}`;
+    window.location.href = url;
+}
+
+function downloadZoneProductivityCSV() {
+    const days = prompt('Zone productivity window (days):', '30');
+    if (!days || isNaN(days) || days < 1 || days > 180) return;
+    const url = `/api/productivity/zones/export?days=${days}`;
+    window.location.href = url;
+}
+
+function downloadRecommendationsCSV() {
+    const days = prompt('Recommendations window (days):', '30');
+    if (!days || isNaN(days) || days < 1 || days > 180) return;
+    const url = `/api/productivity/recommendations/export?days=${days}`;
+    window.location.href = url;
 }
 
 // Waste Audit Insights Functions
