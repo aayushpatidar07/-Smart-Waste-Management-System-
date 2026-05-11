@@ -2686,6 +2686,50 @@ def get_waste_audit_summary():
         return jsonify({'success': False, 'error': str(e)}), 500
 
 
+@app.route('/api/audit/summary/export', methods=['GET'])
+@login_required
+def export_audit_summary_csv():
+    """Export waste audit summary as CSV."""
+    try:
+        days = int(request.args.get('days', 30))
+        if days < 1 or days > 180:
+            return jsonify({'success': False, 'message': 'days must be between 1 and 180'}), 400
+
+        result = WasteAuditInsightsService().get_audit_summary(days)
+        if not result.get('success'):
+            return jsonify(result), 400
+
+        output = io.StringIO()
+        writer = csv.writer(output)
+        writer.writerow(['Metric', 'Value'])
+
+        metrics = [
+            ('Period (days)', result.get('period_days')),
+            ('Audit Score', result.get('audit_score')),
+            ('Status', result.get('status')),
+            ('Total Reports', result.get('total_reports')),
+            ('Pending Reports', result.get('pending_reports')),
+            ('Resolved Reports', result.get('resolved_reports')),
+            ('Critical Reports', result.get('critical_reports')),
+            ('Resolution Rate (%)', result.get('resolution_rate_percent')),
+            ('Avg Resolution Hours', result.get('avg_resolution_hours')),
+        ]
+
+        for metric, value in metrics:
+            writer.writerow([metric, value])
+
+        csv_data = output.getvalue()
+        output.close()
+
+        headers = {
+            'Content-Type': 'text/csv; charset=utf-8',
+            'Content-Disposition': f'attachment; filename="audit_summary_{days}d.csv"'
+        }
+        return Response(csv_data, headers=headers)
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
 @app.route('/api/audit/zones', methods=['GET'])
 @login_required
 def get_waste_audit_zone_ranking():
