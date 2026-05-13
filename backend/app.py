@@ -2748,6 +2748,51 @@ def get_waste_audit_zone_ranking():
         return jsonify({'success': False, 'error': str(e)}), 500
 
 
+@app.route('/api/audit/zones/export', methods=['GET'])
+@login_required
+def export_audit_zones_csv():
+    """Export zone-level audit ranking as CSV."""
+    try:
+        days = int(request.args.get('days', 30))
+        limit = int(request.args.get('limit', 100))
+        if days < 1 or days > 365:
+            return jsonify({'success': False, 'message': 'days must be between 1 and 365'}), 400
+        if limit < 1 or limit > 1000:
+            return jsonify({'success': False, 'message': 'limit must be between 1 and 1000'}), 400
+
+        result = WasteAuditInsightsService().get_zone_audit_ranking(days, limit)
+        if not result.get('success'):
+            return jsonify(result), 400
+
+        zones = result.get('zones', [])
+
+        output = io.StringIO()
+        writer = csv.writer(output)
+        writer.writerow(['Zone', 'Total Reports', 'Pending', 'Resolved', 'Resolution %', 'Audit Score', 'Risk'])
+
+        for z in zones:
+            writer.writerow([
+                z.get('zone'),
+                z.get('total_reports') or 0,
+                z.get('pending_reports') or 0,
+                z.get('resolved_reports') or 0,
+                z.get('resolution_rate_percent') or 0,
+                z.get('audit_score') or 0,
+                z.get('risk_score') or ''
+            ])
+
+        csv_data = output.getvalue()
+        output.close()
+
+        headers = {
+            'Content-Type': 'text/csv; charset=utf-8',
+            'Content-Disposition': f'attachment; filename="audit_zones_{days}d.csv"'
+        }
+        return Response(csv_data, headers=headers)
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
 @app.route('/api/audit/timeline', methods=['GET'])
 @login_required
 def get_waste_audit_timeline():
