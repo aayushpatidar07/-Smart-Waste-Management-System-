@@ -2808,6 +2808,49 @@ def get_waste_audit_timeline():
         return jsonify({'success': False, 'error': str(e)}), 500
 
 
+@app.route('/api/audit/timeline/export', methods=['GET'])
+@login_required
+def export_audit_timeline_csv():
+    """Export daily audit resolution timeline as CSV."""
+    try:
+        days = int(request.args.get('days', 30))
+        if days < 1 or days > 180:
+            return jsonify({'success': False, 'message': 'days must be between 1 and 180'}), 400
+
+        result = WasteAuditInsightsService().get_resolution_timeline(days)
+        if not result.get('success'):
+            return jsonify(result), 400
+
+        timeline = result.get('timeline', [])
+
+        output = io.StringIO()
+        writer = csv.writer(output)
+        writer.writerow(['Report Day', 'Total Reports', 'Resolved Reports', 'Open Reports', 'Resolution Rate (%)'])
+
+        for row in timeline:
+            total_reports = int(row.get('total_reports') or 0)
+            resolved_reports = int(row.get('resolved_reports') or 0)
+            resolution_rate = round((resolved_reports / total_reports * 100), 2) if total_reports else 0
+            writer.writerow([
+                row.get('report_day'),
+                total_reports,
+                resolved_reports,
+                int(row.get('open_reports') or 0),
+                resolution_rate,
+            ])
+
+        csv_data = output.getvalue()
+        output.close()
+
+        headers = {
+            'Content-Type': 'text/csv; charset=utf-8',
+            'Content-Disposition': f'attachment; filename="audit_timeline_{days}d.csv"'
+        }
+        return Response(csv_data, headers=headers)
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
 @app.route('/api/audit/backlog', methods=['GET'])
 @login_required
 def get_waste_audit_backlog():
