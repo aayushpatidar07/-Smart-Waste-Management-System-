@@ -13,7 +13,7 @@ class CitizenFeedbackService:
         self.db = Database()
     
     def get_feedback_overview(self, days=30):
-        """Get overall citizen feedback overview."""
+        """Get overall citizen feedback overview."""    
         try:
             start_date = (datetime.now() - timedelta(days=days)).strftime('%Y-%m-%d')
             
