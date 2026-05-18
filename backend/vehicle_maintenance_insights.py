@@ -2,7 +2,7 @@
 Vehicle maintenance tracking and analytics service.
 Tracks scheduled maintenance, maintenance history, and vehicle health.
 """
-from database import Database
+from models import Database
 from datetime import datetime, timedelta
 
 
