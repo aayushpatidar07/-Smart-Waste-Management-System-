@@ -892,7 +892,7 @@ For improvements or bug fixes:
 
 For questions or issues:
 - Create an issue on GitHub
-- Email: [your-email@example.com]
+- Email: patidaraayush.62@gmail.com
 
 ---
 
