@@ -2,7 +2,7 @@
 Environmental impact insights service for waste management system.
 Tracks CO2 emissions, environmental impact metrics, and sustainability progress.
 """
-from database import Database
+from models import Database
 from datetime import datetime, timedelta
 
 

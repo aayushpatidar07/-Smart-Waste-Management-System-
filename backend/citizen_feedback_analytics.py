@@ -2,7 +2,7 @@
 Citizen feedback analytics service for waste management system.
 Tracks citizen engagement, feedback sentiment, complaints, and satisfaction metrics.
 """
-from database import Database
+from models import Database
 from datetime import datetime, timedelta
 
 
