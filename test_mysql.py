@@ -40,6 +40,7 @@ def test_connection():
                 
         except Error as e:
             print(f"❌ Failed: {e}")
+            # print(f"❌ Failed: {e}")
             continue
     
     print("\n❌ None of the common passwords worked.")
