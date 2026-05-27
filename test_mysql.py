@@ -11,8 +11,7 @@ def test_connection():
     passwords = ['', 'root', 'admin', 'password', 'mysql', '123456', 'Root@123']
     
     print("🔍 Testing MySQL Connection...")
-    print("=" * 50)
-    
+    print("=" * 50) 
     for pwd in passwords:
         try:
             print(f"\nTrying password: '{pwd}'")
