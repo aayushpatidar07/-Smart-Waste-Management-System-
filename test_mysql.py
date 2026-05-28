@@ -6,7 +6,7 @@ Test MySQL connection and create database
 import mysql.connector
 from mysql.connector import Error
 
-def test_connection():
+def test_connection(): 
     """Test different MySQL password combinations"""
     passwords = ['', 'root', 'admin', 'password', 'mysql', '123456', 'Root@123']
     
