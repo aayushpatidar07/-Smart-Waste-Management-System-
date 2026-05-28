@@ -55,3 +55,14 @@ if __name__ == "__main__":
         print("   1. Stop MySQL service")
         print("   2. Run: mysqld --init-file=<path to reset file>")
         print("   3. Or use MySQL Workbench to reset password")
+
+
+# return None
+
+# if __name__ == "__main__":
+#     password = test_connection()
+#     if not password:
+#         print("\n💡 To reset MySQL password on Windows:")
+#         print("   1. Stop MySQL service")
+#         print("   2. Run: mysqld --init-file=<path to reset file>")
+#         print("   3. Or use MySQL Workbench to reset password")
