@@ -7,7 +7,7 @@ A complete, production-ready smart waste management system built with **Python F
 ---
 
 ## 📋 Table of Contents
-
+ 
 - [Features](#features)
 - [Technology Stack](#technology-stack)
 - [System Architecture](#system-architecture)
