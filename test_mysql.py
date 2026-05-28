@@ -3,6 +3,11 @@ Quick Database Setup Test
 Test MySQL connection and create database
 """
 
+"""
+Quick Database Setup Test 
+Test MySQL connection and create database
+"""
+
 import mysql.connector
 from mysql.connector import Error
 
