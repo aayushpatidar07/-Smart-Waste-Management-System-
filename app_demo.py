@@ -8,8 +8,6 @@ from flask_cors import CORS
 from datetime import datetime
 import os
 
-
-
 app = Flask(__name__, 
     template_folder='../frontend/templates',
     static_folder='../frontend/static')
