@@ -10,7 +10,7 @@
 ```bash
 # Check Python version (needs 3.8+)
 python --version
-
+ 
 # Create virtual environment
 python -m venv venv
 
