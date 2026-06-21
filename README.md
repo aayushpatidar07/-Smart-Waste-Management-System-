@@ -5,7 +5,7 @@
 A complete, production-ready smart waste management system built with **Python Flask**, **MySQL**, **Bootstrap**, **Chart.js**, and **scikit-learn**. This system uses IoT sensors and AI/ML algorithms to optimize waste collection routes and monitor bin status in real-time.
 
 --- 
-
+ 
 ## 📋 Table of Contents
  
 - [Features](#features)
