@@ -552,7 +552,7 @@ Students will understand:
 ## 📞 Support & Contact
 
 For any queries or support:
-- Email: [your-email@example.com]
+- Email: [patidaraayush.62@gmail.com]
 - GitHub: [repository-url]
 - Documentation: README.md
 - Setup Help: SETUP_GUIDE.md
