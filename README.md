@@ -1,4 +1,4 @@
-m # Smart Waste Management System
+# Smart Waste Management System
 
 ## 🌍 AI + IoT Based Waste Collection & Monitoring System
 
